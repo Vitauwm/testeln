@@ -8,32 +8,42 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         [v-cloak] { display: none; }
-        .carregando-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.85); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; color: #0f172a; }
+        
+        .carregando-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.85); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; color: #0f172a; backdrop-filter: blur(2px); }
+        
+        /* Ocultar elementos na hora de gerar o PDF/Imprimir */
+        @media print {
+            aside, header, .no-print { display: none !important; }
+            main { padding: 0 !important; overflow: visible !important; height: auto !important; }
+            body, #app { overflow: visible !important; height: auto !important; display: block !important; background: white !important; }
+            .print-break-inside { page-break-inside: avoid; }
+            .shadow-sm, .shadow-md { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+            .bg-slate-50 { background-color: white !important; }
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 overflow-hidden h-screen flex relative">
+<body class="bg-slate-50 text-slate-800 overflow-hidden h-screen flex">
 
 <div id="app" v-cloak class="flex w-full h-full relative">
 
+    <!-- Tela de Carregamento Global -->
     <div v-if="carregandoDados" class="carregando-overlay">
         <i class="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-600 mb-4"></i>
-        <p>A sincronizar com a folha de cálculo...</p>
+        <p>A sincronizar com a base de dados...</p>
     </div>
 
-    <!-- OVERLAY MOBILE (Fundo escuro quando o menu abre) -->
-    <div v-if="menuMobileAberto" @click="menuMobileAberto = false" 
-         class="fixed inset-0 bg-slate-900/60 z-40 md:hidden backdrop-blur-sm transition-opacity">
-    </div>
+    <!-- Backdrop do menu Mobile -->
+    <div v-if="menuMobileAberto" @click="menuMobileAberto = false" class="fixed inset-0 bg-slate-900/50 z-30 md:hidden backdrop-blur-sm transition-opacity"></div>
 
-    <!-- MENU LATERAL -->
-    <aside :class="menuMobileAberto ? 'translate-x-0' : '-translate-x-full'" 
-           class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0">
+    <!-- MENU LATERAL (Responsivo) -->
+    <aside :class="menuMobileAberto ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white transition-transform duration-300 ease-in-out md:relative md:translate-x-0 flex flex-col shadow-2xl md:shadow-none">
         <div class="p-6 border-b border-slate-800 flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold tracking-wider text-emerald-400">LAINOVA</h1>
@@ -51,7 +61,7 @@
                     <i :class="aba.icon" class="w-5 text-center"></i>
                     <span>{{ aba.label }}</span>
                 </div>
-                <span v-if="aba.id === 'aprovacoes' && totalPendentes > 0" class="bg-amber-500 text-slate-900 text-xs px-2 py-0.5 rounded-full font-bold">
+                <span v-if="aba.id === 'aprovacoes' && totalPendentes > 0" class="bg-amber-500 text-slate-900 text-xs px-2 py-0.5 rounded-full font-bold no-print">
                     {{ totalPendentes }}
                 </span>
             </button>
@@ -60,60 +70,63 @@
 
     <!-- ÁREA PRINCIPAL -->
     <main class="flex-1 flex flex-col h-full overflow-hidden relative w-full">
-        <header class="bg-white shadow-sm px-4 md:px-8 py-4 flex justify-between items-center z-10 border-b border-slate-200">
+        
+        <!-- Cabeçalho de Topo -->
+        <header class="bg-white shadow-sm px-6 md:px-8 py-4 flex justify-between items-center z-10 border-b border-slate-200">
             <div class="flex items-center gap-4">
-                <button class="md:hidden text-slate-600 text-2xl hover:text-slate-900 transition" @click="menuMobileAberto = true">
+                <button class="md:hidden text-slate-600 text-xl p-2 -ml-2 rounded-md hover:bg-slate-100" @click="menuMobileAberto = true">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <h2 class="text-lg md:text-xl font-bold text-slate-800 truncate">{{ tituloAbaAtual }}</h2>
+                <h2 class="text-xl font-bold text-slate-800 truncate">{{ tituloAbaAtual }}</h2>
             </div>
             <div class="text-right hidden sm:block">
-                <div class="text-xl md:text-2xl font-mono font-bold text-slate-700 flex items-center justify-end gap-2">
+                <div class="text-2xl font-mono font-bold text-slate-700 flex items-center justify-end gap-2">
                     <i class="fa-regular fa-clock text-emerald-500"></i> {{ horaFormatada }}
                 </div>
-                <div class="text-xs md:text-sm text-slate-500 capitalize">{{ dataFormatada }}</div>
+                <div class="text-sm text-slate-500 capitalize">{{ dataFormatada }}</div>
             </div>
         </header>
 
+        <!-- Container de Telas -->
         <div class="flex-1 overflow-y-auto p-4 md:p-8">
             
             <!-- TELA 1: DASHBOARD -->
             <div v-if="abaAtual === 'dashboard'" class="space-y-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-blue-500 text-xl flex-shrink-0"><i class="fa-solid fa-users"></i></div>
+                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-blue-500 text-xl shrink-0"><i class="fa-solid fa-users"></i></div>
                         <div><p class="text-sm font-medium text-slate-500">Membros Ativos</p><p class="text-2xl font-bold text-slate-800">{{ membros.length }}</p></div>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-emerald-500 text-xl flex-shrink-0"><i class="fa-solid fa-circle-check"></i></div>
-                        <div><p class="text-sm font-medium text-slate-500">Total Horas Aprovadas</p><p class="text-2xl font-bold text-slate-800">{{ totalHorasAprovadasGeral }}h</p></div>
+                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-emerald-500 text-xl shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+                        <div><p class="text-sm font-medium text-slate-500">Total de Horas Aprovadas</p><p class="text-2xl font-bold text-slate-800">{{ totalHorasAprovadasGeral }}h</p></div>
                     </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4 sm:col-span-2 lg:col-span-1">
-                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-amber-500 text-xl flex-shrink-0"><i class="fa-solid fa-hourglass-half"></i></div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-amber-500 text-xl shrink-0"><i class="fa-solid fa-hourglass-half"></i></div>
                         <div><p class="text-sm font-medium text-slate-500">Horas Pendentes</p><p class="text-2xl font-bold text-slate-800">{{ totalHorasPendentesGeral }}h</p></div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full max-w-full">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
                         <h3 class="font-semibold text-slate-700">Acumulado de Horas por Integrante</h3>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left whitespace-nowrap min-w-full">
+                        <table class="w-full text-left whitespace-nowrap">
                             <thead class="bg-slate-50 text-slate-500 text-sm">
                                 <tr>
                                     <th class="px-6 py-3 font-medium">Membro</th>
                                     <th class="px-6 py-3 font-medium">Cargo</th>
-                                    <th class="px-6 py-3 font-medium">Horas Aprovadas</th>
-                                    <th class="px-6 py-3 font-medium">Horas Pendentes</th>
+                                    <th class="px-6 py-3 font-medium text-right">Horas Aprovadas</th>
+                                    <th class="px-6 py-3 font-medium text-right">Horas Pendentes</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 <tr v-for="m in acumuladoMembros" :key="m.nome" class="hover:bg-slate-50 transition-colors">
                                     <td class="px-6 py-4 font-bold text-slate-700">{{ m.nome }}</td>
                                     <td class="px-6 py-4 text-slate-600">{{ m.cargo }}</td>
-                                    <td class="px-6 py-4 text-emerald-600 font-bold text-base">{{ m.aprovadas }}h</td>
-                                    <td class="px-6 py-4 text-amber-600 font-medium">{{ m.pendentes }}h</td>
+                                    <td class="px-6 py-4 text-right text-emerald-600 font-bold text-base">{{ m.aprovadas }}h</td>
+                                    <td class="px-6 py-4 text-right text-amber-600 font-medium">{{ m.pendentes }}h</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -125,148 +138,139 @@
             <div v-if="abaAtual === 'graficos'" class="space-y-6">
                 <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-lg">Evolução de Horas Aprovadas</h3>
-                        <p class="text-slate-500 text-sm">Acompanhe a dedicação dos membros distribuída no tempo.</p>
+                        <h3 class="font-bold text-slate-800 text-lg">Evolução Geral</h3>
+                        <p class="text-slate-500 text-sm">Distribuição das horas aprovadas no tempo.</p>
                     </div>
                     <div class="flex bg-slate-100 p-1.5 rounded-lg border border-slate-200 w-full md:w-auto overflow-x-auto">
-                        <button @click="mudarPeriodoGrafico('semana')" :class="periodoGrafico === 'semana' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition whitespace-nowrap">Por Semana</button>
-                        <button @click="mudarPeriodoGrafico('mes')" :class="periodoGrafico === 'mes' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition whitespace-nowrap">Por Mês</button>
-                        <button @click="mudarPeriodoGrafico('semestre')" :class="periodoGrafico === 'semestre' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition whitespace-nowrap">Por Semestre</button>
+                        <button @click="mudarPeriodoGrafico('semana')" :class="periodoGrafico === 'semana' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition">Semana</button>
+                        <button @click="mudarPeriodoGrafico('mes')" :class="periodoGrafico === 'mes' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition">Mês</button>
+                        <button @click="mudarPeriodoGrafico('semestre')" :class="periodoGrafico === 'semestre' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition">Semestre</button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm w-full">
-                        <h4 class="font-semibold text-slate-700 mb-4 capitalize">Carga Horária ({{ periodoGrafico }})</h4>
-                        <div class="relative h-64 md:h-72 w-full">
-                            <canvas id="graficoTemporal"></canvas>
-                        </div>
+                    <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h4 class="font-semibold text-slate-700 mb-4 capitalize">Carga Horária (Por {{ periodoGrafico }})</h4>
+                        <div class="relative h-72 w-full"><canvas id="graficoTemporal"></canvas></div>
                     </div>
-                    <div class="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm w-full">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <h4 class="font-semibold text-slate-700 mb-4">Distribuição por Categoria</h4>
-                        <div class="relative h-64 md:h-72 w-full">
-                            <canvas id="graficoCategoria"></canvas>
-                        </div>
+                        <div class="relative h-72 w-full"><canvas id="graficoCategoria"></canvas></div>
                     </div>
                 </div>
             </div>
 
             <!-- TELA 3: APROVAÇÕES DA DIRETORIA -->
             <div v-if="abaAtual === 'aprovacoes'" class="space-y-6">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-amber-50 border border-amber-200 p-4 rounded-xl gap-4">
-                    <div class="flex items-start md:items-center gap-3">
-                        <i class="fa-solid fa-shield-halved text-amber-600 text-2xl mt-1 md:mt-0"></i>
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center bg-amber-50 border border-amber-200 p-4 rounded-xl gap-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-shield-halved text-amber-600 text-2xl"></i>
                         <div>
-                            <h4 class="font-bold text-amber-900">Painel de Validação da Direção</h4>
-                            <p class="text-xs text-amber-700">Avalie os registos enviados pelos elementos da equipa.</p>
+                            <h4 class="font-bold text-amber-900">Validação da Direção</h4>
+                            <p class="text-xs text-amber-700">Avalie os registos pendentes enviados pelos elementos.</p>
                         </div>
                     </div>
-                    <button @click="fetchPlanilha" class="bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 text-sm font-semibold flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2 rounded-lg transition">
-                        <i class="fa-solid fa-arrows-rotate"></i> Atualizar Pedidos
+                    <button @click="fetchPlanilha" class="text-amber-800 hover:text-amber-950 text-sm font-semibold flex items-center gap-1 bg-amber-100 px-3 py-1.5 rounded-lg transition self-end sm:self-auto">
+                        <i class="fa-solid fa-arrows-rotate"></i> Recarregar
                     </button>
                 </div>
 
                 <div class="space-y-4">
-                    <div v-for="reg in registrosPendentes" :key="reg.ID" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-                        <div class="w-full">
-                            <div class="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
+                    <div v-for="reg in registrosPendentes" :key="reg.ID" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:shadow-md">
+                        <div class="w-full md:w-auto">
+                            <div class="flex items-center gap-3 flex-wrap mb-1">
                                 <span class="text-lg font-bold text-slate-800">{{ reg.Nome_Membro }}</span>
-                                <span class="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded text-xs font-bold">{{ reg.Categoria }}</span>
+                                <span class="bg-blue-50 border border-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">{{ reg.Categoria }}</span>
+                                <span class="text-slate-400 text-xs font-mono"><i class="fa-regular fa-calendar mr-1"></i>{{ formatarDataSheet(reg.Data) }}</span>
                             </div>
-                            <span class="text-slate-400 text-xs font-mono block mb-2">{{ formatarDataSheet(reg.Data) }}</span>
-                            <p class="text-slate-600 text-sm mb-2 md:mb-0">{{ reg.Descricao }}</p>
-                            <p class="text-emerald-700 font-bold mt-2 text-base"><i class="fa-regular fa-clock mr-1"></i> {{ reg.Horas_Gastas }} horas solicitadas</p>
+                            <p class="text-slate-600 text-sm break-words">{{ reg.Descricao }}</p>
+                            <p class="text-emerald-700 font-bold mt-2 text-sm sm:text-base"><i class="fa-regular fa-clock mr-1"></i> {{ reg.Horas_Gastas }} horas solicitadas</p>
                         </div>
-                        <div class="flex w-full md:w-auto items-center gap-2 mt-2 md:mt-0">
-                            <button @click="processarStatus(reg.ID, 'Aprovada')" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 md:px-5 py-2 md:py-2.5 rounded-lg font-semibold text-sm shadow flex items-center justify-center gap-2 transition">
+                        <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                            <button @click="processarStatus(reg.ID, 'Aprovada')" class="flex-1 md:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition">
                                 <i class="fa-solid fa-check"></i> Aprovar
                             </button>
-                            <button @click="processarStatus(reg.ID, 'Recusada')" class="flex-1 md:flex-none bg-red-600 hover:bg-red-700 text-white px-4 md:px-5 py-2 md:py-2.5 rounded-lg font-semibold text-sm shadow flex items-center justify-center gap-2 transition">
+                            <button @click="processarStatus(reg.ID, 'Recusada')" class="flex-1 md:flex-initial bg-red-600 hover:bg-red-700 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition">
                                 <i class="fa-solid fa-xmark"></i> Recusar
                             </button>
                         </div>
                     </div>
 
-                    <div v-if="registrosPendentes.length === 0" class="bg-white rounded-xl border border-slate-200 p-8 md:p-12 text-center text-slate-500">
-                        <i class="fa-regular fa-circle-check text-5xl md:text-6xl text-emerald-500 mb-4 opacity-75"></i>
-                        <h3 class="text-lg md:text-xl font-bold text-slate-700 mb-1">Tudo em dia!</h3>
-                        <p class="text-sm md:text-base">Não há nenhum registo pendente de validação.</p>
+                    <div v-if="registrosPendentes.length === 0" class="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500 shadow-sm">
+                        <i class="fa-regular fa-circle-check text-5xl text-emerald-400 mb-4 opacity-70"></i>
+                        <p class="font-bold text-slate-700 text-lg">Tudo em dia!</p>
+                        <p class="text-sm mt-1">Não há nenhum registo pendente de validação no momento.</p>
                     </div>
                 </div>
             </div>
 
             <!-- TELA 4: REGISTAR HORAS -->
             <div v-if="abaAtual === 'registrar'" class="max-w-3xl mx-auto space-y-6 pb-10">
-                <div class="flex p-1 bg-slate-200 rounded-lg w-full md:w-max mx-auto md:mx-0">
-                    <button @click="modoRegistro = 'manual'" class="flex-1 md:flex-none px-5 py-2.5 rounded-md font-medium text-sm transition-colors"
-                        :class="modoRegistro === 'manual' ? 'bg-white shadow text-slate-800' : 'text-slate-500'">Registo Manual</button>
-                    <button @click="modoRegistro = 'cronometro'" class="flex-1 md:flex-none px-5 py-2.5 rounded-md font-medium text-sm transition-colors"
+                <div class="flex p-1 bg-slate-200 rounded-lg w-full sm:w-max mx-auto md:mx-0">
+                    <button @click="modoRegistro = 'manual'" class="flex-1 sm:flex-none px-5 py-2 rounded-md font-medium text-sm transition-colors"
+                        :class="modoRegistro === 'manual' ? 'bg-white shadow text-slate-800' : 'text-slate-500'">Manual</button>
+                    <button @click="modoRegistro = 'cronometro'" class="flex-1 sm:flex-none px-5 py-2 rounded-md font-medium text-sm transition-colors"
                         :class="modoRegistro === 'cronometro' ? 'bg-white shadow text-slate-800' : 'text-slate-500'">Cronómetro</button>
                 </div>
 
-                <!-- CRONÓMETRO ADAPTÁVEL -->
-                <div v-if="modoRegistro === 'cronometro'" class="bg-slate-900 text-white rounded-xl shadow-xl p-6 md:p-8 flex flex-col items-center text-center">
-                    <h3 class="text-slate-400 mb-4 uppercase text-xs md:text-sm font-bold flex items-center justify-center">
-                        <i class="fa-solid fa-circle-dot text-red-500 animate-pulse mr-2" v-if="timerAtivo"></i>
-                        Atividade em Andamento
+                <div v-if="modoRegistro === 'cronometro'" class="bg-slate-900 text-white rounded-xl shadow-xl p-8 flex flex-col items-center relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-slate-800 to-transparent opacity-50"></div>
+                    <h3 class="text-slate-300 mb-4 uppercase text-xs font-bold tracking-widest relative z-10 flex items-center">
+                        <i class="fa-solid fa-circle text-red-500 text-[8px] animate-pulse mr-2" v-if="timerAtivo"></i> Monitorização de Atividade
                     </h3>
-                    <!-- Fonte reduzida para telemóveis para não quebrar layout -->
-                    <div class="text-5xl sm:text-6xl md:text-7xl font-mono font-bold mb-8 tracking-wider">{{ cronometroDisplay }}</div>
-                    
-                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
-                        <button v-if="!timerAtivo" @click="iniciarCronometro" class="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-lg transition shadow-lg shadow-emerald-500/30">
-                            Iniciar Cronómetro
-                        </button>
-                        <button v-else @click="pararCronometro" class="bg-red-500 hover:bg-red-600 w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-lg transition shadow-lg shadow-red-500/30 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-stop"></i> Parar e Preencher
-                        </button>
+                    <div class="text-5xl sm:text-7xl font-mono font-bold mb-8 relative z-10 tracking-tight">{{ cronometroDisplay }}</div>
+                    <div class="flex gap-4 relative z-10 w-full sm:w-auto">
+                        <button v-if="!timerAtivo" @click="iniciarCronometro" class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 px-8 py-3 rounded-full font-bold shadow-lg transition">Iniciar</button>
+                        <button v-else @click="pararCronometro" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 px-8 py-3 rounded-full font-bold shadow-lg transition"><i class="fa-solid fa-stop mr-2"></i>Parar e Preencher</button>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
-                    <form @submit.prevent="salvarRegistro" class="space-y-4 md:space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <form @submit.prevent="salvarRegistro" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-semibold mb-1 text-slate-700">Membro</label>
-                                <select v-model="form.nomeMembro" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">
-                                    <option value="" disabled>Selecione o seu nome...</option>
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Selecione o Membro</label>
+                                <select v-model="form.nomeMembro" required class="w-full border border-slate-300 p-3 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition">
+                                    <option value="" disabled>Escolha um membro...</option>
                                     <option v-for="m in membros" :key="m.Nome" :value="m.Nome">{{ m.Nome }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold mb-1 text-slate-700">Data</label>
-                                <input v-model="form.data" type="date" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" />
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Data da Atividade</label>
+                                <input v-model="form.data" type="date" required class="w-full border border-slate-300 p-3 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition" />
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold mb-1 text-slate-700">Hora Início</label>
-                                <input v-model="form.inicio" type="time" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" />
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Hora de Início</label>
+                                <input v-model="form.inicio" type="time" required class="w-full border border-slate-300 p-3 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition font-mono" />
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold mb-1 text-slate-700">Hora Término</label>
-                                <input v-model="form.termino" type="time" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" />
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Hora de Término</label>
+                                <input v-model="form.termino" type="time" required class="w-full border border-slate-300 p-3 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition font-mono" />
                             </div>
+                            
                             <div class="md:col-span-2">
-                                <div class="p-3 md:p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between border gap-2 transition-colors" :class="duracaoCalculadaHoras > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'">
-                                    <span class="text-slate-600 font-medium text-sm md:text-base">Tempo Calculado Automaticamente:</span>
-                                    <span class="text-xl md:text-2xl font-bold text-emerald-700">{{ duracaoCalculadaHoras }} horas</span>
+                                <div class="p-4 rounded-lg flex flex-col sm:flex-row items-center justify-between border transition-colors" :class="duracaoCalculadaHoras > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'">
+                                    <span class="text-slate-600 font-medium mb-1 sm:mb-0"><i class="fa-solid fa-calculator mr-2 opacity-50"></i>Tempo Calculado:</span>
+                                    <span class="text-2xl font-bold" :class="duracaoCalculadaHoras > 0 ? 'text-emerald-700' : 'text-slate-400'">{{ duracaoCalculadaHoras }} horas</span>
                                 </div>
                             </div>
+                            
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold mb-1 text-slate-700">Categoria</label>
-                                <select v-model="form.categoria" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">
-                                    <option value="" disabled>Selecione a categoria da atividade...</option>
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Categoria da Atividade</label>
+                                <select v-model="form.categoria" required class="w-full border border-slate-300 p-3 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition">
+                                    <option value="" disabled>Classifique a sua atividade...</option>
                                     <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
                                 </select>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-semibold mb-1 text-slate-700">Descrição Detalhada</label>
-                                <textarea v-model="form.descricao" rows="3" required placeholder="Descreva brevemente o que foi feito..." class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition resize-none"></textarea>
+                                <textarea v-model="form.descricao" rows="3" required placeholder="Descreva brevemente o que foi feito..." class="w-full border border-slate-300 p-3 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition resize-none"></textarea>
                             </div>
                         </div>
-                        <div class="flex justify-end pt-4">
-                            <button type="submit" :disabled="enviandoRegistro" class="w-full sm:w-auto bg-slate-900 text-white px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition shadow-md">
+                        <div class="flex justify-end pt-4 border-t border-slate-100">
+                            <button type="submit" :disabled="enviandoRegistro" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-md transition disabled:opacity-70">
                                 <span v-if="enviandoRegistro"><i class="fa-solid fa-spinner fa-spin"></i> A enviar...</span>
-                                <span v-else><i class="fa-regular fa-paper-plane"></i> Enviar para Aprovação</span>
+                                <span v-else><i class="fa-regular fa-paper-plane"></i> Enviar para Validação</span>
                             </button>
                         </div>
                     </form>
@@ -275,30 +279,34 @@
 
             <!-- TELA 5: GESTÃO DE MEMBROS -->
             <div v-if="abaAtual === 'membros'" class="space-y-6">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <h3 class="text-lg font-bold text-slate-800">Equipa LAINOVA</h3>
-                    <button @click="modalMembroAberto = true" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow flex items-center justify-center gap-2 transition">
+                <div class="flex justify-end">
+                    <button @click="modalMembroAberto = true" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 transition">
                         <i class="fa-solid fa-user-plus"></i> Adicionar Membro
                     </button>
                 </div>
                 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left whitespace-nowrap min-w-full">
-                            <thead class="bg-slate-50 text-slate-500 text-sm">
+                        <table class="w-full text-left whitespace-nowrap">
+                            <thead class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
                                 <tr>
-                                    <th class="px-6 py-3 font-medium">Nome</th>
-                                    <th class="px-6 py-3 font-medium">Cargo / Função</th>
-                                    <th class="px-6 py-3 font-medium text-right">Ações</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider">Nome do Elemento</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider">Cargo / Função</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-right">Ações</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                <tr v-for="m in membros" :key="m.Nome" class="hover:bg-slate-50 transition-colors">
-                                    <td class="px-6 py-4 font-medium text-slate-700"><i class="fa-regular fa-circle-user text-slate-400 mr-2 text-lg align-middle"></i> {{ m.Nome }}</td>
+                                <tr v-for="m in membros" :key="m.Nome" class="hover:bg-slate-50 transition">
+                                    <td class="px-6 py-4 font-medium text-slate-800">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs uppercase">{{ m.Nome.substring(0,2) }}</div>
+                                            {{ m.Nome }}
+                                        </div>
+                                    </td>
                                     <td class="px-6 py-4 text-slate-500">{{ m.Cargo }}</td>
                                     <td class="px-6 py-4 text-right">
-                                        <button @click="removerMembro(m.Nome)" class="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition" title="Excluir Membro">
-                                            <i class="fa-regular fa-trash-can"></i> Eliminar
+                                        <button @click="removerMembro(m.Nome)" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition" title="Excluir Membro">
+                                            <i class="fa-regular fa-trash-can"></i> <span class="hidden sm:inline ml-1">Eliminar</span>
                                         </button>
                                     </td>
                                 </tr>
@@ -310,27 +318,32 @@
 
             <!-- TELA 6: HISTÓRICO -->
             <div v-if="abaAtual === 'historico'" class="space-y-6">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left whitespace-nowrap min-w-full">
-                            <thead class="bg-slate-50 text-slate-500 text-sm">
+                        <table class="w-full text-left whitespace-nowrap">
+                            <thead class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
                                 <tr>
-                                    <th class="px-6 py-3 font-medium">Data</th>
-                                    <th class="px-6 py-3 font-medium">Membro</th>
-                                    <th class="px-6 py-3 font-medium">Categoria</th>
-                                    <th class="px-6 py-3 font-medium">Horas</th>
-                                    <th class="px-6 py-3 font-medium">Status</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider">Data</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider">Membro</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider">Categoria</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-right">Horas</th>
+                                    <th class="px-6 py-4 font-semibold uppercase tracking-wider text-center">Status</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                <tr v-for="r in registrosOrdenados" :key="r.ID" class="hover:bg-slate-50 text-sm transition-colors">
+                                <tr v-for="r in registrosOrdenados" :key="r.ID" class="hover:bg-slate-50 text-sm transition">
                                     <td class="px-6 py-4 text-slate-500 font-mono text-xs">{{ formatarDataSheet(r.Data) }}</td>
-                                    <td class="px-6 py-4 font-bold text-slate-700">{{ r.Nome_Membro }}</td>
-                                    <td class="px-6 py-4"><span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded text-xs font-bold">{{ r.Categoria }}</span></td>
-                                    <td class="px-6 py-4 font-bold text-slate-800">{{ r.Horas_Gastas }}h</td>
-                                    <td class="px-6 py-4 font-bold" 
-                                        :class="r.Status === 'Aprovada' ? 'text-emerald-600' : (r.Status === 'Pendente' ? 'text-amber-500' : 'text-red-500')">
-                                        <i class="fa-solid" :class="r.Status === 'Aprovada' ? 'fa-check' : (r.Status === 'Pendente' ? 'fa-clock' : 'fa-xmark')"></i> {{ r.Status }}
+                                    <td class="px-6 py-4 font-semibold text-slate-700">{{ r.Nome_Membro }}</td>
+                                    <td class="px-6 py-4"><span class="bg-blue-50 border border-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">{{ r.Categoria }}</span></td>
+                                    <td class="px-6 py-4 font-bold text-slate-800 text-right">{{ r.Horas_Gastas }}h</td>
+                                    <td class="px-6 py-4 font-bold text-center">
+                                        <span class="px-3 py-1 rounded-full text-xs" :class="{
+                                            'bg-emerald-100 text-emerald-700': r.Status === 'Aprovada',
+                                            'bg-amber-100 text-amber-700': r.Status === 'Pendente',
+                                            'bg-red-100 text-red-700': r.Status === 'Recusada' || r.Status === 'Rejeitada'
+                                        }">
+                                            <i class="fa-solid fa-circle text-[8px] mr-1"></i>{{ r.Status }}
+                                        </span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -339,30 +352,208 @@
                 </div>
             </div>
 
+            <!-- TELA 7: GERADOR DE RELATÓRIOS -->
+            <div v-if="abaAtual === 'relatorios'" class="space-y-6 pb-10 print:pb-0">
+                
+                <!-- Cabeçalho e Exportação -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-file-invoice text-emerald-600"></i> Relatório de Atividades</h2>
+                        <p class="text-slate-500 text-sm mt-1">Período de Análise: <span class="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{{ periodoRelatorioTexto }}</span></p>
+                    </div>
+                    <div class="flex items-center gap-2 w-full md:w-auto no-print">
+                        <button @click="exportarCSV" class="flex-1 md:flex-none bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-file-csv text-emerald-600"></i> Excel/CSV
+                        </button>
+                        <button @click="imprimirRelatorio" class="flex-1 md:flex-none bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-print"></i> Guardar PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros Avançados (Não aparecem na impressão) -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 no-print">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                            <button @click="aplicarFiltroRapido('mes')" class="flex-1 sm:flex-none px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium transition border border-slate-200">Mensal</button>
+                            <button @click="aplicarFiltroRapido('semestre')" class="flex-1 sm:flex-none px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium transition border border-slate-200">Semestral</button>
+                            <button @click="aplicarFiltroRapido('ano')" class="flex-1 sm:flex-none px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium transition border border-slate-200">Anual</button>
+                            <button @click="aplicarFiltroRapido('tudo')" class="flex-1 sm:flex-none px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-sm font-medium transition shadow-sm">Ver Tudo</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-slate-100 pt-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Data Inicial</label>
+                            <input type="date" v-model="filtroRelatorio.inicio" class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 outline-none focus:border-emerald-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Data Final</label>
+                            <input type="date" v-model="filtroRelatorio.fim" class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 outline-none focus:border-emerald-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Filtrar por Utilizador</label>
+                            <select v-model="filtroRelatorio.membro" class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 outline-none focus:border-emerald-500 text-sm">
+                                <option value="">Todos os membros da equipa</option>
+                                <option v-for="m in membros" :key="m.Nome" :value="m.Nome">{{ m.Nome }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPIs e Estatísticas do Período -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 print-break-inside">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute right-0 top-0 opacity-5 text-6xl -mt-2 -mr-2"><i class="fa-solid fa-clock"></i></div>
+                        <span class="text-slate-500 text-xs font-bold uppercase mb-1 z-10">Total Registado</span>
+                        <span class="text-3xl font-black text-slate-800 z-10">{{ kpisRelatorio.totalHoras }}<span class="text-lg font-medium text-slate-500">h</span></span>
+                        <span class="text-xs text-slate-400 mt-1 z-10 font-medium">No período selecionado</span>
+                    </div>
+                    
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden border-b-4 border-b-emerald-500">
+                        <div class="absolute right-0 top-0 opacity-5 text-emerald-500 text-6xl -mt-2 -mr-2"><i class="fa-solid fa-piggy-bank"></i></div>
+                        <span class="text-emerald-700 text-xs font-bold uppercase mb-1 z-10">Banco (Aprovadas)</span>
+                        <span class="text-3xl font-black text-slate-800 z-10">{{ kpisRelatorio.horasBanco }}<span class="text-lg font-medium text-slate-500">h</span></span>
+                        <span class="text-xs text-slate-400 mt-1 z-10 font-medium">Horas validadas ({{ kpisRelatorio.percBanco }}%)</span>
+                    </div>
+                    
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute right-0 top-0 opacity-5 text-6xl -mt-2 -mr-2"><i class="fa-solid fa-list-check"></i></div>
+                        <span class="text-slate-500 text-xs font-bold uppercase mb-1 z-10">Volume de Atividades</span>
+                        <span class="text-3xl font-black text-slate-800 z-10">{{ kpisRelatorio.totalAtividades }}</span>
+                        <span class="text-xs text-slate-400 mt-1 z-10 font-medium">Média: {{ kpisRelatorio.mediaHorasPorAtividade }}h / ativ.</span>
+                    </div>
+                    
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute right-0 top-0 opacity-5 text-amber-500 text-6xl -mt-2 -mr-2"><i class="fa-solid fa-trophy"></i></div>
+                        <span class="text-amber-600 text-xs font-bold uppercase mb-1 z-10">Destaque do Período</span>
+                        <span class="text-lg font-black text-slate-800 truncate z-10" :title="kpisRelatorio.membroDestaque">{{ kpisRelatorio.membroDestaque || 'N/A' }}</span>
+                        <span class="text-xs text-slate-400 mt-1 z-10 font-medium">Maior acumulador de horas</span>
+                    </div>
+                </div>
+
+                <!-- Gráficos Analíticos -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 print-break-inside">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-700 mb-1">Ranking de Horas (Top 10)</h4>
+                        <p class="text-xs text-slate-400 mb-4">Utilizadores com mais horas no período selecionado</p>
+                        <div class="relative h-64 w-full">
+                            <canvas id="chartRelRanking"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-700 mb-1">Distribuição de Carga Horária</h4>
+                        <p class="text-xs text-slate-400 mb-4">Divisão das horas por categoria de atividade</p>
+                        <div class="relative h-64 w-full">
+                            <canvas id="chartRelCategoria"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabelas de Detalhamento Cruzado -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Resumo Agrupado por Membro -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-1 print-break-inside flex flex-col">
+                        <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-700 text-sm">Resumo da Equipa</h3>
+                            <span class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-bold">{{ rankingRelatorio.length }} membros</span>
+                        </div>
+                        <div class="overflow-x-auto flex-1 max-h-[400px]">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-white sticky top-0 shadow-sm z-10">
+                                    <tr class="text-slate-500 text-xs uppercase tracking-wider">
+                                        <th class="px-4 py-3 font-semibold">Nome</th>
+                                        <th class="px-4 py-3 font-semibold text-right">Horas</th>
+                                        <th class="px-4 py-3 font-semibold text-center" title="Total de Atividades">Ativ.</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr v-for="(m, index) in rankingRelatorio" :key="m.nome" 
+                                        class="hover:bg-slate-50 cursor-pointer transition group" 
+                                        @click="filtroRelatorio.membro = m.nome" title="Clique para filtrar registos deste utilizador">
+                                        <td class="px-4 py-3 font-semibold text-slate-700 flex items-center gap-2">
+                                            <span class="text-xs font-bold text-slate-400 w-3 text-center">{{ index + 1 }}º</span> 
+                                            <span class="group-hover:text-emerald-600 transition-colors">{{ m.nome.split(' ')[0] }} {{ m.nome.split(' ').length > 1 ? m.nome.split(' ').pop() : '' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-emerald-600 font-bold">{{ m.horas }}h</td>
+                                        <td class="px-4 py-3 text-center text-slate-500">{{ m.atividades }}</td>
+                                    </tr>
+                                    <tr v-if="rankingRelatorio.length === 0">
+                                        <td colspan="3" class="px-4 py-8 text-center text-slate-400 italic">Nenhum dado no período.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 text-center no-print">
+                            <i class="fa-solid fa-mouse-pointer mr-1"></i> Clique num membro para filtrar a tabela ao lado
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Registos Detalhados -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-2 print-break-inside flex flex-col">
+                        <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex flex-wrap justify-between items-center gap-2">
+                            <h3 class="font-bold text-slate-700 text-sm">
+                                Extrato Detalhado 
+                                <span v-if="filtroRelatorio.membro" class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded ml-1 border border-emerald-100 flex items-center inline-flex">
+                                    {{ filtroRelatorio.membro }}
+                                    <i class="fa-solid fa-xmark ml-2 cursor-pointer hover:text-red-500" @click="filtroRelatorio.membro = ''" title="Remover filtro"></i>
+                                </span>
+                            </h3>
+                            <span class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-bold">{{ registrosRelatorio.length }} registos</span>
+                        </div>
+                        <div class="overflow-x-auto flex-1 max-h-[400px]">
+                            <table class="w-full text-left whitespace-nowrap text-sm">
+                                <thead class="bg-white sticky top-0 shadow-sm z-10">
+                                    <tr class="text-slate-500 text-xs uppercase tracking-wider">
+                                        <th class="px-4 py-3 font-semibold">Data</th>
+                                        <th class="px-4 py-3 font-semibold" v-if="!filtroRelatorio.membro">Utilizador</th>
+                                        <th class="px-4 py-3 font-semibold">Categoria</th>
+                                        <th class="px-4 py-3 font-semibold text-right">Horas</th>
+                                        <th class="px-4 py-3 font-semibold">Descrição da Atividade</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr v-for="r in registrosRelatorioOrdenados" :key="r.ID" class="hover:bg-slate-50 transition">
+                                        <td class="px-4 py-3 text-slate-500 font-mono text-xs">{{ formatarDataSheet(r.Data) }}</td>
+                                        <td class="px-4 py-3 font-semibold text-slate-700" v-if="!filtroRelatorio.membro">{{ r.Nome_Membro.split(' ')[0] }}</td>
+                                        <td class="px-4 py-3"><span class="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{{ r.Categoria }}</span></td>
+                                        <td class="px-4 py-3 font-bold text-slate-800 text-right">{{ parseFloat(r.Horas_Gastas).toFixed(1) }}h</td>
+                                        <td class="px-4 py-3 text-slate-600 truncate max-w-[250px]" :title="r.Descricao">{{ r.Descricao }}</td>
+                                    </tr>
+                                    <tr v-if="registrosRelatorio.length === 0">
+                                        <td colspan="5" class="px-4 py-12 text-center text-slate-400">Nenhum registo encontrado para os filtros selecionados.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 
     <!-- MODAL: CADASTRAR MEMBRO -->
-    <div v-if="modalMembroAberto" class="fixed inset-0 bg-slate-900/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity">
+    <div v-if="modalMembroAberto" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-md transform transition-all">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl md:text-2xl font-bold text-slate-800">Registar Integrante</h3>
-                <button @click="modalMembroAberto = false" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
+                <h3 class="text-2xl font-bold text-slate-800">Registar Integrante</h3>
+                <button @click="modalMembroAberto = false" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <form @submit.prevent="salvarMembro" class="space-y-4">
+            <form @submit.prevent="salvarMembro" class="space-y-5">
                 <div>
                     <label class="block text-sm font-semibold mb-1 text-slate-700">Nome Completo</label>
-                    <input v-model="formMembro.nome" type="text" required class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
+                    <input v-model="formMembro.nome" type="text" required placeholder="Ex: João Silva" class="w-full border border-slate-300 rounded-lg p-3 focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
                 </div>
                 <div>
                     <label class="block text-sm font-semibold mb-1 text-slate-700">Cargo / Função</label>
-                    <input v-model="formMembro.cargo" type="text" required class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" placeholder="Ex: Diretor de Marketing" />
+                    <input v-model="formMembro.cargo" type="text" required placeholder="Ex: Pesquisador, Tesoureiro" class="w-full border border-slate-300 rounded-lg p-3 focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
                 </div>
-                <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-8 pt-6 border-t border-slate-100">
-                    <button type="button" @click="modalMembroAberto = false" class="w-full sm:w-auto px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition">Cancelar</button>
-                    <button type="submit" :disabled="enviandoMembro" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        <span v-if="enviandoMembro"><i class="fa-solid fa-spinner fa-spin"></i> A guardar...</span>
-                        <span v-else>Guardar Membro</span>
+                <div class="flex justify-end gap-3 mt-8 pt-5 border-t border-slate-100">
+                    <button type="button" @click="modalMembroAberto = false" class="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+                    <button type="submit" :disabled="enviandoMembro" class="px-5 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-md transition disabled:opacity-70 flex items-center gap-2">
+                        <span v-if="enviandoMembro"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                        A Guardar
                     </button>
                 </div>
             </form>
@@ -374,36 +565,37 @@
     // Configuração do URL da API Google
     const API_URL = "https://script.google.com/macros/s/AKfycbyMp10ud-tJCV7hp_yzOX8VruuoxLc8h9aF3q8fobNveCni_6FZod9oaEyLCbTYmvOZHQ/exec";
 
-    const { createApp, ref, computed, onMounted, onUnmounted, nextTick } = Vue;
+    const { createApp, ref, computed, onMounted, onUnmounted, nextTick, watch } = Vue;
 
     createApp({
         setup() {
+            // Definição das Abas do Sistema
             const abas = [
                 { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
                 { id: 'graficos', label: 'Gráficos & Análises', icon: 'fa-solid fa-chart-simple' },
                 { id: 'aprovacoes', label: 'Aprovações da Direção', icon: 'fa-solid fa-shield-halved' },
                 { id: 'registrar', label: 'Registar Horas', icon: 'fa-solid fa-business-time' },
                 { id: 'membros', label: 'Membros', icon: 'fa-solid fa-users' },
-                { id: 'historico', label: 'Histórico', icon: 'fa-solid fa-list-check' }
+                { id: 'historico', label: 'Histórico', icon: 'fa-solid fa-clock-rotate-left' },
+                { id: 'relatorios', label: 'Relatórios (Novo)', icon: 'fa-solid fa-file-invoice' }
             ];
             const abaAtual = ref('dashboard');
-            const menuMobileAberto = ref(false); // Controlador de estado do menu mobile
+            const menuMobileAberto = ref(false);
             const carregandoDados = ref(true);
             const enviandoRegistro = ref(false);
             const enviandoMembro = ref(false);
 
-            // Relógio
+            // Relógio e Formatação de Data Global
             const dataAtualObj = ref(new Date());
             let intervalRelogio;
-            const horaFormatada = computed(() => dataAtualObj.value.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }));
+            const horaFormatada = computed(() => dataAtualObj.value.toLocaleTimeString('pt-PT'));
             const dataFormatada = computed(() => new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(dataAtualObj.value));
 
-            // Dados
+            // Estado Central dos Dados
             const membros = ref([]);
             const registros = ref([]);
             const categorias = ['Ensino', 'Pesquisa', 'Extensão', 'Reuniões', 'Evento', 'Divulgação', 'Administrativo', 'Projeto', 'Outros'];
 
-            // Função para obter dados
             const fetchPlanilha = async () => {
                 carregandoDados.value = true;
                 try {
@@ -411,7 +603,10 @@
                     const data = await res.json();
                     membros.value = data.membros || [];
                     registros.value = data.registros || [];
+                    
+                    // Renderizar gráficos se a aba correspondente estiver aberta
                     if (abaAtual.value === 'graficos') nextTick(() => renderizarGraficos());
+                    if (abaAtual.value === 'relatorios') nextTick(() => renderizarGraficosRelatorio());
                 } catch (e) {
                     console.error("Erro ao ligar à folha de cálculo.", e);
                 } finally {
@@ -420,34 +615,244 @@
             };
 
             const totalHorasAprovadasGeral = computed(() => {
-                return registros.value.filter(r => r.Status === 'Aprovada').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0);
+                return registros.value.filter(r => r.Status === 'Aprovada').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0).toFixed(1);
             });
             const totalHorasPendentesGeral = computed(() => {
-                return registros.value.filter(r => r.Status === 'Pendente').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0);
+                return registros.value.filter(r => r.Status === 'Pendente').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0).toFixed(1);
             });
 
             const acumuladoMembros = computed(() => {
                 return membros.value.map(m => {
                     const aprovadas = registros.value.filter(r => r.Nome_Membro === m.Nome && r.Status === 'Aprovada').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0);
                     const pendentes = registros.value.filter(r => r.Nome_Membro === m.Nome && r.Status === 'Pendente').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0);
-                    return { nome: m.Nome, cargo: m.Cargo, aprovadas, pendentes };
-                });
+                    return { nome: m.Nome, cargo: m.Cargo, aprovadas: aprovadas.toFixed(1), pendentes: pendentes.toFixed(1) };
+                }).sort((a,b) => parseFloat(b.aprovadas) - parseFloat(a.aprovadas)); // Ordena por quem tem mais banco aprovado
             });
 
-            const registrosPendentes = computed(() => registros.value.filter(r => r.Status === 'Pendente'));
+            const registrosPendentes = computed(() => registros.value.filter(r => r.Status === 'Pendente').sort((a, b) => new Date(b.Data) - new Date(a.Data)));
             const totalPendentes = computed(() => registrosPendentes.value.length);
 
-            // Trocar de Aba (Garante que o menu fecha na versão mobile ao escolher uma opção)
             const mudarAba = (idAba) => {
                 abaAtual.value = idAba;
-                menuMobileAberto.value = false; // Fecha o painel lateral em ecrãs pequenos
+                menuMobileAberto.value = false; // Fecha menu no mobile
+                if (idAba === 'graficos') nextTick(() => renderizarGraficos());
+                if (idAba === 'relatorios') nextTick(() => renderizarGraficosRelatorio());
+            };
+
+            // -------------------------------------------------------------
+            // LÓGICA DO GERADOR DE RELATÓRIOS
+            // -------------------------------------------------------------
+            const filtroRelatorio = ref({ inicio: '', fim: '', membro: '' });
+            let chartRelRankingInstance = null;
+            let chartRelCategoriaInstance = null;
+
+            // Filtros rápidos de período
+            const aplicarFiltroRapido = (tipo) => {
+                const hoje = new Date();
+                filtroRelatorio.value.membro = ''; // Limpa filtro de membro
                 
-                if (idAba === 'graficos') {
-                    nextTick(() => renderizarGraficos());
+                if (tipo === 'mes') {
+                    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+                    filtroRelatorio.value.inicio = primeiroDia.toISOString().split('T')[0];
+                    filtroRelatorio.value.fim = ultimoDia.toISOString().split('T')[0];
+                } else if (tipo === 'semestre') {
+                    const seisMesesAtras = new Date(hoje.getFullYear(), hoje.getMonth() - 6, hoje.getDate());
+                    filtroRelatorio.value.inicio = seisMesesAtras.toISOString().split('T')[0];
+                    filtroRelatorio.value.fim = hoje.toISOString().split('T')[0];
+                } else if (tipo === 'ano') {
+                    const primeiroDia = new Date(hoje.getFullYear(), 0, 1);
+                    filtroRelatorio.value.inicio = primeiroDia.toISOString().split('T')[0];
+                    filtroRelatorio.value.fim = hoje.toISOString().split('T')[0];
+                } else if (tipo === 'tudo') {
+                    filtroRelatorio.value.inicio = '';
+                    filtroRelatorio.value.fim = '';
                 }
             };
 
-            // GRÁFICOS (Chart.js)
+            // Helper para parsear Data DD/MM/YYYY ou YYYY-MM-DD para timestamp
+            const parseDateToTime = (dStr) => {
+                if(!dStr) return 0;
+                let iso = dStr;
+                if(iso.includes('/')) {
+                    const parts = iso.split('/');
+                    iso = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+                if(iso.includes('T')) iso = iso.split('T')[0];
+                return new Date(iso + 'T00:00:00').getTime();
+            };
+
+            // Filtragem principal dos registros para o relatório
+            const registrosRelatorio = computed(() => {
+                const inicioTime = filtroRelatorio.value.inicio ? parseDateToTime(filtroRelatorio.value.inicio) : 0;
+                const fimTime = filtroRelatorio.value.fim ? parseDateToTime(filtroRelatorio.value.fim) : Infinity;
+                
+                return registros.value.filter(r => {
+                    const rTime = parseDateToTime(r.Data);
+                    const noPeriodo = (!inicioTime || rTime >= inicioTime) && (!fimTime || rTime <= fimTime);
+                    const matchMembro = filtroRelatorio.value.membro ? r.Nome_Membro === filtroRelatorio.value.membro : true;
+                    // Excluímos status Recusado do relatório principal analítico
+                    const isValido = r.Status !== 'Recusada' && r.Status !== 'Rejeitada';
+                    
+                    return noPeriodo && matchMembro && isValido;
+                });
+            });
+
+            // Ordenação para a tabela detalhada do relatório
+            const registrosRelatorioOrdenados = computed(() => {
+                return [...registrosRelatorio.value].sort((a,b) => parseDateToTime(b.Data) - parseDateToTime(a.Data));
+            });
+
+            const periodoRelatorioTexto = computed(() => {
+                if(!filtroRelatorio.value.inicio && !filtroRelatorio.value.fim) return "Todo o Histórico";
+                const i = filtroRelatorio.value.inicio ? formatarDataSheet(filtroRelatorio.value.inicio) : 'Início';
+                const f = filtroRelatorio.value.fim ? formatarDataSheet(filtroRelatorio.value.fim) : 'Hoje';
+                return `${i} a ${f}`;
+            });
+
+            // Geração de KPIs Dinâmicos (Estatísticas do Período)
+            const kpisRelatorio = computed(() => {
+                const regs = registrosRelatorio.value;
+                let totalHoras = 0;
+                let horasBanco = 0;
+                const membrosCount = {};
+                
+                regs.forEach(r => {
+                    const h = parseFloat(r.Horas_Gastas) || 0;
+                    totalHoras += h;
+                    if(r.Status === 'Aprovada') horasBanco += h;
+                    
+                    if(r.Status === 'Aprovada') {
+                        membrosCount[r.Nome_Membro] = (membrosCount[r.Nome_Membro] || 0) + h;
+                    }
+                });
+
+                let membroDestaque = '';
+                let maxHoras = 0;
+                for (const [nome, h] of Object.entries(membrosCount)) {
+                    if (h > maxHoras) { maxHoras = h; membroDestaque = nome; }
+                }
+
+                const percBanco = totalHoras > 0 ? ((horasBanco / totalHoras) * 100).toFixed(0) : 0;
+                const mediaPorAtiv = regs.length > 0 ? (totalHoras / regs.length).toFixed(1) : 0;
+
+                return {
+                    totalHoras: totalHoras.toFixed(1),
+                    horasBanco: horasBanco.toFixed(1),
+                    percBanco: percBanco,
+                    totalAtividades: regs.length,
+                    mediaHorasPorAtividade: mediaPorAtiv,
+                    membroDestaque: membroDestaque
+                };
+            });
+
+            // Processamento do Ranking
+            const rankingRelatorio = computed(() => {
+                const mapa = {};
+                registrosRelatorio.value.forEach(r => {
+                    // Contamos apenas horas validadas para ranking
+                    if(r.Status !== 'Aprovada') return;
+                    
+                    if(!mapa[r.Nome_Membro]) mapa[r.Nome_Membro] = { nome: r.Nome_Membro, horas: 0, atividades: 0 };
+                    mapa[r.Nome_Membro].horas += (parseFloat(r.Horas_Gastas) || 0);
+                    mapa[r.Nome_Membro].atividades += 1;
+                });
+                return Object.values(mapa)
+                    .map(m => ({ ...m, horas: parseFloat(m.horas.toFixed(1)) }))
+                    .sort((a, b) => b.horas - a.horas);
+            });
+
+            // Gráficos do Relatório
+            const renderizarGraficosRelatorio = () => {
+                const ctxRank = document.getElementById('chartRelRanking');
+                const ctxCat = document.getElementById('chartRelCategoria');
+                if (!ctxRank || !ctxCat) return;
+
+                Chart.defaults.font.family = "'Inter', sans-serif";
+
+                // Gráfico 1: Ranking (Top 10)
+                const rankData = rankingRelatorio.value.slice(0, 10); 
+                if (chartRelRankingInstance) chartRelRankingInstance.destroy();
+                chartRelRankingInstance = new Chart(ctxRank, {
+                    type: 'bar',
+                    data: {
+                        labels: rankData.map(d => d.nome.split(' ')[0]), // Apenas o primeiro nome para caber bem
+                        datasets: [{
+                            label: 'Horas Aprovadas',
+                            data: rankData.map(d => d.horas),
+                            backgroundColor: '#10b981', // Emerald 500
+                            borderRadius: 6,
+                            barPercentage: 0.6
+                        }]
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, x: { grid: { display: false } } }
+                    }
+                });
+
+                // Gráfico 2: Distribuição por Categorias
+                const catMap = {};
+                registrosRelatorio.value.forEach(r => {
+                    const c = r.Categoria || 'Outros';
+                    catMap[c] = (catMap[c] || 0) + (parseFloat(r.Horas_Gastas) || 0);
+                });
+                
+                if (chartRelCategoriaInstance) chartRelCategoriaInstance.destroy();
+                chartRelCategoriaInstance = new Chart(ctxCat, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(catMap),
+                        datasets: [{
+                            data: Object.values(catMap),
+                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6', '#f43f5e', '#0ea5e9'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, 
+                        plugins: { 
+                            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } 
+                        },
+                        cutout: '65%'
+                    }
+                });
+            };
+
+            // Assistente Reactivo para Redesenhar os gráficos quando os filtros mudam
+            watch(registrosRelatorio, () => {
+                if(abaAtual.value === 'relatorios') {
+                    nextTick(() => renderizarGraficosRelatorio());
+                }
+            }, { deep: true });
+
+            // Exportação
+            const exportarCSV = () => {
+                let csv = "Data,Membro,Categoria,Horas,Status,Descricao\n";
+                registrosRelatorioOrdenados.value.forEach(r => {
+                    let desc = (r.Descricao || '').replace(/"/g, '""'); // Escapar aspas para CSV
+                    csv += `${formatarDataSheet(r.Data)},"${r.Nome_Membro}","${r.Categoria}",${r.Horas_Gastas},"${r.Status}","${desc}"\n`;
+                });
+                const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: "text/csv;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Relatorio_LAINOVA_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            const imprimirRelatorio = () => {
+                window.print();
+            };
+
+            // -------------------------------------------------------------
+            // GRÁFICOS DA TELA "ANÁLISES" ORIGINAL (Visão Geral de longo prazo)
+            // -------------------------------------------------------------
             let chartTemporalInstance = null;
             let chartCategoriaInstance = null;
             const periodoGrafico = ref('mes');
@@ -462,6 +867,7 @@
                 const ctxCat = document.getElementById('graficoCategoria');
                 if (!ctxTemp || !ctxCat) return;
 
+                Chart.defaults.font.family = "'Inter', sans-serif";
                 const registrosValidos = registros.value.filter(r => r.Status === 'Aprovada');
                 
                 // Agrupamento Temporal
@@ -495,10 +901,10 @@
                     data: {
                         labels: Object.keys(dadosTemporais),
                         datasets: [{
-                            label: 'Horas Realizadas',
+                            label: 'Horas Aprovadas',
                             data: Object.values(dadosTemporais),
-                            backgroundColor: '#10b981',
-                            borderRadius: 6
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 4
                         }]
                     },
                     options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
@@ -525,6 +931,9 @@
                 });
             };
 
+            // -------------------------------------------------------------
+            // COMUNICAÇÃO COM O APPS SCRIPT (POST)
+            // -------------------------------------------------------------
             const processarStatus = async (idRegistro, novoStatus) => {
                 carregandoDados.value = true;
                 try {
@@ -535,12 +944,11 @@
                     });
                     await fetchPlanilha();
                 } catch (err) {
-                    alert("Erro: " + err.message);
+                    alert("Erro ao validar: " + err.message);
                     carregandoDados.value = false;
                 }
             };
 
-            // Membros
             const modalMembroAberto = ref(false);
             const formMembro = ref({ nome: '', cargo: '' });
 
@@ -563,7 +971,7 @@
             };
 
             const removerMembro = async (nome) => {
-                if (!confirm(`Deseja realmente eliminar ${nome} da liga?`)) return;
+                if (!confirm(`Tem a certeza que deseja eliminar ${nome} da liga?`)) return;
                 carregandoDados.value = true;
                 try {
                     await fetch(API_URL, {
@@ -578,7 +986,6 @@
                 }
             };
 
-            // Registo de Horas
             const modoRegistro = ref('manual');
             const form = ref({ nomeMembro: '', data: new Date().toISOString().split('T')[0], inicio: '', termino: '', categoria: '', descricao: '' });
 
@@ -591,9 +998,9 @@
             });
 
             const salvarRegistro = async () => {
-                if (duracaoCalculadaHoras.value <= 0) { alert("Horário inválido."); return; }
+                if (duracaoCalculadaHoras.value <= 0) { alert("Horário inválido. Verifique o início e fim."); return; }
                 enviandoRegistro.value = true;
-                const dataFormatada = form.value.data.split('-').reverse().join('/');
+                const dataFormatadaStr = form.value.data.split('-').reverse().join('/');
 
                 try {
                     await fetch(API_URL, {
@@ -602,15 +1009,15 @@
                         body: JSON.stringify({
                             acao: "inserir",
                             nomeMembro: form.value.nomeMembro,
-                            data: dataFormatada,
+                            data: dataFormatadaStr,
                             categoria: form.value.categoria,
                             horas: duracaoCalculadaHoras.value,
                             descricao: form.value.descricao + ` (${form.value.inicio} - ${form.value.termino})`
                         })
                     });
-                    alert("Horas enviadas para aprovação!");
+                    
                     form.value = { nomeMembro: '', data: new Date().toISOString().split('T')[0], inicio: '', termino: '', categoria: '', descricao: '' };
-                    abaAtual.value = 'historico';
+                    mudarAba('historico');
                     fetchPlanilha();
                 } catch (err) {
                     alert("Erro ao guardar: " + err.message);
@@ -619,7 +1026,7 @@
                 }
             };
 
-            // Cronómetro
+            // Controlo do Cronómetro visual
             const timerAtivo = ref(false);
             const segundosCount = ref(0);
             let intervalCronometro;
@@ -644,7 +1051,8 @@
                 segundosCount.value = 0;
             };
 
-            const registrosOrdenados = computed(() => [...registros.value].reverse());
+            // Helpers
+            const registrosOrdenados = computed(() => [...registros.value].sort((a,b) => parseDateToTime(b.Data) - parseDateToTime(a.Data)));
             const formatarDataSheet = (dataStr) => {
                 if(!dataStr) return '';
                 if(dataStr.includes('T')) return dataStr.split('T')[0].split('-').reverse().join('/');
@@ -654,6 +1062,7 @@
             onMounted(() => {
                 intervalRelogio = setInterval(() => dataAtualObj.value = new Date(), 1000);
                 fetchPlanilha();
+                aplicarFiltroRapido('mes'); // Inicializa o relatório no "Mês Atual" por defeito
             });
 
             onUnmounted(() => {
@@ -671,7 +1080,11 @@
                 periodoGrafico, mudarPeriodoGrafico,
                 modoRegistro, form, duracaoCalculadaHoras, salvarRegistro,
                 timerAtivo, cronometroDisplay, iniciarCronometro, pararCronometro,
-                registrosOrdenados, formatarDataSheet
+                registrosOrdenados, formatarDataSheet,
+                
+                // Variáveis e métodos do Gerador de Relatórios
+                filtroRelatorio, periodoRelatorioTexto, registrosRelatorio, registrosRelatorioOrdenados,
+                kpisRelatorio, rankingRelatorio, aplicarFiltroRapido, exportarCSV, imprimirRelatorio
             };
         }
     }).mount('#app');
