@@ -14,10 +14,10 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         [v-cloak] { display: none; }
-        .carregando-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.85); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; color: #0f172a; }
+        .carregando-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.85); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; color: #0f172a; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 overflow-hidden h-screen flex">
+<body class="bg-slate-50 text-slate-800 overflow-hidden h-screen flex relative">
 
 <div id="app" v-cloak class="flex w-full h-full relative">
 
@@ -26,11 +26,22 @@
         <p>A sincronizar com a folha de cálculo...</p>
     </div>
 
+    <!-- OVERLAY MOBILE (Fundo escuro quando o menu abre) -->
+    <div v-if="menuMobileAberto" @click="menuMobileAberto = false" 
+         class="fixed inset-0 bg-slate-900/60 z-40 md:hidden backdrop-blur-sm transition-opacity">
+    </div>
+
     <!-- MENU LATERAL -->
-    <aside class="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
-        <div class="p-6 border-b border-slate-800">
-            <h1 class="text-2xl font-bold tracking-wider text-emerald-400">LAINOVA</h1>
-            <p class="text-xs text-slate-400 mt-1">Gestão de Atividades</p>
+    <aside :class="menuMobileAberto ? 'translate-x-0' : '-translate-x-full'" 
+           class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wider text-emerald-400">LAINOVA</h1>
+                <p class="text-xs text-slate-400 mt-1">Gestão de Atividades</p>
+            </div>
+            <button @click="menuMobileAberto = false" class="md:hidden text-slate-400 hover:text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
         <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
             <button v-for="aba in abas" :key="aba.id" @click="mudarAba(aba.id)"
@@ -48,19 +59,19 @@
     </aside>
 
     <!-- ÁREA PRINCIPAL -->
-    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-10 border-b border-slate-200 flex-wrap gap-4">
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative w-full">
+        <header class="bg-white shadow-sm px-4 md:px-8 py-4 flex justify-between items-center z-10 border-b border-slate-200">
             <div class="flex items-center gap-4">
-                <button class="md:hidden text-slate-600 text-xl" @click="menuMobileAberto = !menuMobileAberto">
+                <button class="md:hidden text-slate-600 text-2xl hover:text-slate-900 transition" @click="menuMobileAberto = true">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <h2 class="text-xl font-bold text-slate-800">{{ tituloAbaAtual }}</h2>
+                <h2 class="text-lg md:text-xl font-bold text-slate-800 truncate">{{ tituloAbaAtual }}</h2>
             </div>
-            <div class="text-right">
-                <div class="text-2xl font-mono font-bold text-slate-700 flex items-center justify-end gap-2">
+            <div class="text-right hidden sm:block">
+                <div class="text-xl md:text-2xl font-mono font-bold text-slate-700 flex items-center justify-end gap-2">
                     <i class="fa-regular fa-clock text-emerald-500"></i> {{ horaFormatada }}
                 </div>
-                <div class="text-sm text-slate-500 capitalize">{{ dataFormatada }}</div>
+                <div class="text-xs md:text-sm text-slate-500 capitalize">{{ dataFormatada }}</div>
             </div>
         </header>
 
@@ -68,27 +79,27 @@
             
             <!-- TELA 1: DASHBOARD -->
             <div v-if="abaAtual === 'dashboard'" class="space-y-6">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-blue-500 text-xl"><i class="fa-solid fa-users"></i></div>
+                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-blue-500 text-xl flex-shrink-0"><i class="fa-solid fa-users"></i></div>
                         <div><p class="text-sm font-medium text-slate-500">Membros Ativos</p><p class="text-2xl font-bold text-slate-800">{{ membros.length }}</p></div>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-emerald-500 text-xl"><i class="fa-solid fa-circle-check"></i></div>
-                        <div><p class="text-sm font-medium text-slate-500">Total de Horas Aprovadas</p><p class="text-2xl font-bold text-slate-800">{{ totalHorasAprovadasGeral }}h</p></div>
+                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-emerald-500 text-xl flex-shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+                        <div><p class="text-sm font-medium text-slate-500">Total Horas Aprovadas</p><p class="text-2xl font-bold text-slate-800">{{ totalHorasAprovadasGeral }}h</p></div>
                     </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-amber-500 text-xl"><i class="fa-solid fa-hourglass-half"></i></div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4 sm:col-span-2 lg:col-span-1">
+                        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white bg-amber-500 text-xl flex-shrink-0"><i class="fa-solid fa-hourglass-half"></i></div>
                         <div><p class="text-sm font-medium text-slate-500">Horas Pendentes</p><p class="text-2xl font-bold text-slate-800">{{ totalHorasPendentesGeral }}h</p></div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full max-w-full">
                     <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
                         <h3 class="font-semibold text-slate-700">Acumulado de Horas por Integrante</h3>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left whitespace-nowrap">
+                        <table class="w-full text-left whitespace-nowrap min-w-full">
                             <thead class="bg-slate-50 text-slate-500 text-sm">
                                 <tr>
                                     <th class="px-6 py-3 font-medium">Membro</th>
@@ -112,28 +123,28 @@
 
             <!-- TELA 2: GRÁFICOS & ANÁLISES -->
             <div v-if="abaAtual === 'graficos'" class="space-y-6">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h3 class="font-bold text-slate-800 text-lg">Evolução de Horas Aprovadas</h3>
                         <p class="text-slate-500 text-sm">Acompanhe a dedicação dos membros distribuída no tempo.</p>
                     </div>
-                    <div class="flex bg-slate-100 p-1.5 rounded-lg border border-slate-200">
-                        <button @click="mudarPeriodoGrafico('semana')" :class="periodoGrafico === 'semana' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="px-4 py-1.5 rounded-md text-sm transition">Por Semana</button>
-                        <button @click="mudarPeriodoGrafico('mes')" :class="periodoGrafico === 'mes' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="px-4 py-1.5 rounded-md text-sm transition">Por Mês</button>
-                        <button @click="mudarPeriodoGrafico('semestre')" :class="periodoGrafico === 'semestre' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="px-4 py-1.5 rounded-md text-sm transition">Por Semestre</button>
+                    <div class="flex bg-slate-100 p-1.5 rounded-lg border border-slate-200 w-full md:w-auto overflow-x-auto">
+                        <button @click="mudarPeriodoGrafico('semana')" :class="periodoGrafico === 'semana' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition whitespace-nowrap">Por Semana</button>
+                        <button @click="mudarPeriodoGrafico('mes')" :class="periodoGrafico === 'mes' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition whitespace-nowrap">Por Mês</button>
+                        <button @click="mudarPeriodoGrafico('semestre')" :class="periodoGrafico === 'semestre' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-slate-600'" class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm transition whitespace-nowrap">Por Semestre</button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="lg:col-span-2 bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm w-full">
                         <h4 class="font-semibold text-slate-700 mb-4 capitalize">Carga Horária ({{ periodoGrafico }})</h4>
-                        <div class="relative h-72">
+                        <div class="relative h-64 md:h-72 w-full">
                             <canvas id="graficoTemporal"></canvas>
                         </div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm w-full">
                         <h4 class="font-semibold text-slate-700 mb-4">Distribuição por Categoria</h4>
-                        <div class="relative h-72">
+                        <div class="relative h-64 md:h-72 w-full">
                             <canvas id="graficoCategoria"></canvas>
                         </div>
                     </div>
@@ -142,108 +153,118 @@
 
             <!-- TELA 3: APROVAÇÕES DA DIRETORIA -->
             <div v-if="abaAtual === 'aprovacoes'" class="space-y-6">
-                <div class="flex justify-between items-center bg-amber-50 border border-amber-200 p-4 rounded-xl">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-shield-halved text-amber-600 text-2xl"></i>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-amber-50 border border-amber-200 p-4 rounded-xl gap-4">
+                    <div class="flex items-start md:items-center gap-3">
+                        <i class="fa-solid fa-shield-halved text-amber-600 text-2xl mt-1 md:mt-0"></i>
                         <div>
                             <h4 class="font-bold text-amber-900">Painel de Validação da Direção</h4>
                             <p class="text-xs text-amber-700">Avalie os registos enviados pelos elementos da equipa.</p>
                         </div>
                     </div>
-                    <button @click="fetchPlanilha" class="text-amber-800 hover:text-amber-950 text-sm font-semibold flex items-center gap-1">
-                        <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                    <button @click="fetchPlanilha" class="bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 text-sm font-semibold flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2 rounded-lg transition">
+                        <i class="fa-solid fa-arrows-rotate"></i> Atualizar Pedidos
                     </button>
                 </div>
 
                 <div class="space-y-4">
-                    <div v-for="reg in registrosPendentes" :key="reg.ID" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <div class="flex items-center gap-3">
+                    <div v-for="reg in registrosPendentes" :key="reg.ID" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+                        <div class="w-full">
+                            <div class="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
                                 <span class="text-lg font-bold text-slate-800">{{ reg.Nome_Membro }}</span>
                                 <span class="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded text-xs font-bold">{{ reg.Categoria }}</span>
-                                <span class="text-slate-400 text-sm font-mono">{{ formatarDataSheet(reg.Data) }}</span>
                             </div>
-                            <p class="text-slate-600 text-sm mt-1">{{ reg.Descricao }}</p>
+                            <span class="text-slate-400 text-xs font-mono block mb-2">{{ formatarDataSheet(reg.Data) }}</span>
+                            <p class="text-slate-600 text-sm mb-2 md:mb-0">{{ reg.Descricao }}</p>
                             <p class="text-emerald-700 font-bold mt-2 text-base"><i class="fa-regular fa-clock mr-1"></i> {{ reg.Horas_Gastas }} horas solicitadas</p>
                         </div>
-                        <div class="flex items-center gap-3 w-full md:w-auto">
-                            <button @click="processarStatus(reg.ID, 'Aprovada')" class="flex-1 md:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm shadow flex items-center justify-center gap-2">
+                        <div class="flex w-full md:w-auto items-center gap-2 mt-2 md:mt-0">
+                            <button @click="processarStatus(reg.ID, 'Aprovada')" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 md:px-5 py-2 md:py-2.5 rounded-lg font-semibold text-sm shadow flex items-center justify-center gap-2 transition">
                                 <i class="fa-solid fa-check"></i> Aprovar
                             </button>
-                            <button @click="processarStatus(reg.ID, 'Recusada')" class="flex-1 md:flex-initial bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm shadow flex items-center justify-center gap-2">
+                            <button @click="processarStatus(reg.ID, 'Recusada')" class="flex-1 md:flex-none bg-red-600 hover:bg-red-700 text-white px-4 md:px-5 py-2 md:py-2.5 rounded-lg font-semibold text-sm shadow flex items-center justify-center gap-2 transition">
                                 <i class="fa-solid fa-xmark"></i> Recusar
                             </button>
                         </div>
                     </div>
 
-                    <div v-if="registrosPendentes.length === 0" class="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500">
-                        <i class="fa-regular fa-circle-check text-4xl text-emerald-500 mb-3"></i>
-                        <p class="font-medium text-slate-700">Tudo em dia!</p>
-                        <p class="text-sm">Não há nenhum registo pendente de validação.</p>
+                    <div v-if="registrosPendentes.length === 0" class="bg-white rounded-xl border border-slate-200 p-8 md:p-12 text-center text-slate-500">
+                        <i class="fa-regular fa-circle-check text-5xl md:text-6xl text-emerald-500 mb-4 opacity-75"></i>
+                        <h3 class="text-lg md:text-xl font-bold text-slate-700 mb-1">Tudo em dia!</h3>
+                        <p class="text-sm md:text-base">Não há nenhum registo pendente de validação.</p>
                     </div>
                 </div>
             </div>
 
             <!-- TELA 4: REGISTAR HORAS -->
             <div v-if="abaAtual === 'registrar'" class="max-w-3xl mx-auto space-y-6 pb-10">
-                <div class="flex p-1 bg-slate-200 rounded-lg w-max mx-auto md:mx-0">
-                    <button @click="modoRegistro = 'manual'" class="px-5 py-2 rounded-md font-medium text-sm transition-colors"
+                <div class="flex p-1 bg-slate-200 rounded-lg w-full md:w-max mx-auto md:mx-0">
+                    <button @click="modoRegistro = 'manual'" class="flex-1 md:flex-none px-5 py-2.5 rounded-md font-medium text-sm transition-colors"
                         :class="modoRegistro === 'manual' ? 'bg-white shadow text-slate-800' : 'text-slate-500'">Registo Manual</button>
-                    <button @click="modoRegistro = 'cronometro'" class="px-5 py-2 rounded-md font-medium text-sm transition-colors"
+                    <button @click="modoRegistro = 'cronometro'" class="flex-1 md:flex-none px-5 py-2.5 rounded-md font-medium text-sm transition-colors"
                         :class="modoRegistro === 'cronometro' ? 'bg-white shadow text-slate-800' : 'text-slate-500'">Cronómetro</button>
                 </div>
 
-                <div v-if="modoRegistro === 'cronometro'" class="bg-slate-900 text-white rounded-xl shadow-xl p-8 flex flex-col items-center">
-                    <h3 class="text-slate-400 mb-2 uppercase text-sm font-bold"><i class="fa-solid fa-circle-dot text-red-500 animate-pulse mr-2" v-if="timerAtivo"></i>Cronómetro de Atividade</h3>
-                    <div class="text-6xl font-mono font-bold mb-8">{{ cronometroDisplay }}</div>
-                    <div class="flex gap-4">
-                        <button v-if="!timerAtivo" @click="iniciarCronometro" class="bg-emerald-500 hover:bg-emerald-600 px-8 py-3 rounded-full font-bold">Iniciar</button>
-                        <button v-else @click="pararCronometro" class="bg-red-500 hover:bg-red-600 px-8 py-3 rounded-full font-bold">Parar e Preencher</button>
+                <!-- CRONÓMETRO ADAPTÁVEL -->
+                <div v-if="modoRegistro === 'cronometro'" class="bg-slate-900 text-white rounded-xl shadow-xl p-6 md:p-8 flex flex-col items-center text-center">
+                    <h3 class="text-slate-400 mb-4 uppercase text-xs md:text-sm font-bold flex items-center justify-center">
+                        <i class="fa-solid fa-circle-dot text-red-500 animate-pulse mr-2" v-if="timerAtivo"></i>
+                        Atividade em Andamento
+                    </h3>
+                    <!-- Fonte reduzida para telemóveis para não quebrar layout -->
+                    <div class="text-5xl sm:text-6xl md:text-7xl font-mono font-bold mb-8 tracking-wider">{{ cronometroDisplay }}</div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+                        <button v-if="!timerAtivo" @click="iniciarCronometro" class="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-lg transition shadow-lg shadow-emerald-500/30">
+                            Iniciar Cronómetro
+                        </button>
+                        <button v-else @click="pararCronometro" class="bg-red-500 hover:bg-red-600 w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-lg transition shadow-lg shadow-red-500/30 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-stop"></i> Parar e Preencher
+                        </button>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <form @submit.prevent="salvarRegistro" class="space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
+                    <form @submit.prevent="salvarRegistro" class="space-y-4 md:space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             <div>
-                                <label class="block text-sm font-semibold mb-1">Membro</label>
-                                <select v-model="form.nomeMembro" required class="w-full border p-3 rounded-lg bg-slate-50">
-                                    <option value="" disabled>Selecione...</option>
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Membro</label>
+                                <select v-model="form.nomeMembro" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">
+                                    <option value="" disabled>Selecione o seu nome...</option>
                                     <option v-for="m in membros" :key="m.Nome" :value="m.Nome">{{ m.Nome }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold mb-1">Data</label>
-                                <input v-model="form.data" type="date" required class="w-full border p-3 rounded-lg bg-slate-50" />
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Data</label>
+                                <input v-model="form.data" type="date" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" />
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold mb-1">Hora Início</label>
-                                <input v-model="form.inicio" type="time" required class="w-full border p-3 rounded-lg bg-slate-50" />
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Hora Início</label>
+                                <input v-model="form.inicio" type="time" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" />
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold mb-1">Hora Término</label>
-                                <input v-model="form.termino" type="time" required class="w-full border p-3 rounded-lg bg-slate-50" />
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Hora Término</label>
+                                <input v-model="form.termino" type="time" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" />
                             </div>
                             <div class="md:col-span-2">
-                                <div class="p-4 rounded-lg flex items-center justify-between border" :class="duracaoCalculadaHoras > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50'">
-                                    <span class="text-slate-600 font-medium">Tempo Calculado:</span>
-                                    <span class="text-xl font-bold text-emerald-700">{{ duracaoCalculadaHoras }} horas</span>
+                                <div class="p-3 md:p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between border gap-2 transition-colors" :class="duracaoCalculadaHoras > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'">
+                                    <span class="text-slate-600 font-medium text-sm md:text-base">Tempo Calculado Automaticamente:</span>
+                                    <span class="text-xl md:text-2xl font-bold text-emerald-700">{{ duracaoCalculadaHoras }} horas</span>
                                 </div>
                             </div>
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold mb-1">Categoria</label>
-                                <select v-model="form.categoria" required class="w-full border p-3 rounded-lg bg-slate-50">
-                                    <option value="" disabled>Selecione...</option>
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Categoria</label>
+                                <select v-model="form.categoria" required class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">
+                                    <option value="" disabled>Selecione a categoria da atividade...</option>
                                     <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
                                 </select>
                             </div>
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold mb-1">Descrição</label>
-                                <textarea v-model="form.descricao" rows="2" required class="w-full border p-3 rounded-lg bg-slate-50"></textarea>
+                                <label class="block text-sm font-semibold mb-1 text-slate-700">Descrição Detalhada</label>
+                                <textarea v-model="form.descricao" rows="3" required placeholder="Descreva brevemente o que foi feito..." class="w-full border border-slate-300 p-2.5 md:p-3 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition resize-none"></textarea>
                             </div>
                         </div>
                         <div class="flex justify-end pt-4">
-                            <button type="submit" :disabled="enviandoRegistro" class="bg-slate-900 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2">
+                            <button type="submit" :disabled="enviandoRegistro" class="w-full sm:w-auto bg-slate-900 text-white px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition shadow-md">
                                 <span v-if="enviandoRegistro"><i class="fa-solid fa-spinner fa-spin"></i> A enviar...</span>
                                 <span v-else><i class="fa-regular fa-paper-plane"></i> Enviar para Aprovação</span>
                             </button>
@@ -254,41 +275,44 @@
 
             <!-- TELA 5: GESTÃO DE MEMBROS -->
             <div v-if="abaAtual === 'membros'" class="space-y-6">
-                <div class="flex justify-end">
-                    <button @click="modalMembroAberto = true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow flex items-center gap-2">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <h3 class="text-lg font-bold text-slate-800">Equipa LAINOVA</h3>
+                    <button @click="modalMembroAberto = true" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow flex items-center justify-center gap-2 transition">
                         <i class="fa-solid fa-user-plus"></i> Adicionar Membro
                     </button>
                 </div>
                 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-slate-50 text-slate-500 text-sm">
-                            <tr>
-                                <th class="px-6 py-3 font-medium">Nome</th>
-                                <th class="px-6 py-3 font-medium">Cargo / Função</th>
-                                <th class="px-6 py-3 font-medium text-right">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr v-for="m in membros" :key="m.Nome" class="hover:bg-slate-50">
-                                <td class="px-6 py-4 font-medium text-slate-700"><i class="fa-regular fa-circle-user text-slate-400 mr-2"></i> {{ m.Nome }}</td>
-                                <td class="px-6 py-4 text-slate-500">{{ m.Cargo }}</td>
-                                <td class="px-6 py-4 text-right">
-                                    <button @click="removerMembro(m.Nome)" class="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition" title="Excluir Membro">
-                                        <i class="fa-regular fa-trash-can"></i> Eliminar
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left whitespace-nowrap min-w-full">
+                            <thead class="bg-slate-50 text-slate-500 text-sm">
+                                <tr>
+                                    <th class="px-6 py-3 font-medium">Nome</th>
+                                    <th class="px-6 py-3 font-medium">Cargo / Função</th>
+                                    <th class="px-6 py-3 font-medium text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="m in membros" :key="m.Nome" class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-6 py-4 font-medium text-slate-700"><i class="fa-regular fa-circle-user text-slate-400 mr-2 text-lg align-middle"></i> {{ m.Nome }}</td>
+                                    <td class="px-6 py-4 text-slate-500">{{ m.Cargo }}</td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button @click="removerMembro(m.Nome)" class="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition" title="Excluir Membro">
+                                            <i class="fa-regular fa-trash-can"></i> Eliminar
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- TELA 6: HISTÓRICO -->
             <div v-if="abaAtual === 'historico'" class="space-y-6">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left whitespace-nowrap">
+                        <table class="w-full text-left whitespace-nowrap min-w-full">
                             <thead class="bg-slate-50 text-slate-500 text-sm">
                                 <tr>
                                     <th class="px-6 py-3 font-medium">Data</th>
@@ -299,14 +323,14 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                <tr v-for="r in registrosOrdenados" :key="r.ID" class="hover:bg-slate-50 text-sm">
-                                    <td class="px-6 py-4">{{ formatarDataSheet(r.Data) }}</td>
-                                    <td class="px-6 py-4 font-bold">{{ r.Nome_Membro }}</td>
-                                    <td class="px-6 py-4"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">{{ r.Categoria }}</span></td>
-                                    <td class="px-6 py-4 font-bold">{{ r.Horas_Gastas }}h</td>
+                                <tr v-for="r in registrosOrdenados" :key="r.ID" class="hover:bg-slate-50 text-sm transition-colors">
+                                    <td class="px-6 py-4 text-slate-500 font-mono text-xs">{{ formatarDataSheet(r.Data) }}</td>
+                                    <td class="px-6 py-4 font-bold text-slate-700">{{ r.Nome_Membro }}</td>
+                                    <td class="px-6 py-4"><span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded text-xs font-bold">{{ r.Categoria }}</span></td>
+                                    <td class="px-6 py-4 font-bold text-slate-800">{{ r.Horas_Gastas }}h</td>
                                     <td class="px-6 py-4 font-bold" 
                                         :class="r.Status === 'Aprovada' ? 'text-emerald-600' : (r.Status === 'Pendente' ? 'text-amber-500' : 'text-red-500')">
-                                        {{ r.Status }}
+                                        <i class="fa-solid" :class="r.Status === 'Aprovada' ? 'fa-check' : (r.Status === 'Pendente' ? 'fa-clock' : 'fa-xmark')"></i> {{ r.Status }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -319,22 +343,26 @@
     </main>
 
     <!-- MODAL: CADASTRAR MEMBRO -->
-    <div v-if="modalMembroAberto" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-md">
-            <h3 class="text-2xl font-bold text-slate-800 mb-6">Registar Integrante</h3>
+    <div v-if="modalMembroAberto" class="fixed inset-0 bg-slate-900/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-md transform transition-all">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl md:text-2xl font-bold text-slate-800">Registar Integrante</h3>
+                <button @click="modalMembroAberto = false" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
             <form @submit.prevent="salvarMembro" class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold mb-1 text-slate-700">Nome Completo</label>
-                    <input v-model="formMembro.nome" type="text" required class="w-full border-slate-300 border rounded-lg p-2.5" />
+                    <input v-model="formMembro.nome" type="text" required class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
                 </div>
                 <div>
                     <label class="block text-sm font-semibold mb-1 text-slate-700">Cargo / Função</label>
-                    <input v-model="formMembro.cargo" type="text" required class="w-full border-slate-300 border rounded-lg p-2.5" />
+                    <input v-model="formMembro.cargo" type="text" required class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" placeholder="Ex: Diretor de Marketing" />
                 </div>
-                <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
-                    <button type="button" @click="modalMembroAberto = false" class="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg">Cancelar</button>
-                    <button type="submit" :disabled="enviandoMembro" class="px-5 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">
-                        Guardar Membro
+                <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-8 pt-6 border-t border-slate-100">
+                    <button type="button" @click="modalMembroAberto = false" class="w-full sm:w-auto px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+                    <button type="submit" :disabled="enviandoMembro" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <span v-if="enviandoMembro"><i class="fa-solid fa-spinner fa-spin"></i> A guardar...</span>
+                        <span v-else>Guardar Membro</span>
                     </button>
                 </div>
             </form>
@@ -359,7 +387,7 @@
                 { id: 'historico', label: 'Histórico', icon: 'fa-solid fa-list-check' }
             ];
             const abaAtual = ref('dashboard');
-            const menuMobileAberto = ref(false);
+            const menuMobileAberto = ref(false); // Controlador de estado do menu mobile
             const carregandoDados = ref(true);
             const enviandoRegistro = ref(false);
             const enviandoMembro = ref(false);
@@ -367,7 +395,7 @@
             // Relógio
             const dataAtualObj = ref(new Date());
             let intervalRelogio;
-            const horaFormatada = computed(() => dataAtualObj.value.toLocaleTimeString('pt-PT'));
+            const horaFormatada = computed(() => dataAtualObj.value.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }));
             const dataFormatada = computed(() => new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(dataAtualObj.value));
 
             // Dados
@@ -409,9 +437,11 @@
             const registrosPendentes = computed(() => registros.value.filter(r => r.Status === 'Pendente'));
             const totalPendentes = computed(() => registrosPendentes.value.length);
 
-            // Trocar de Aba e disparar gráficos
+            // Trocar de Aba (Garante que o menu fecha na versão mobile ao escolher uma opção)
             const mudarAba = (idAba) => {
                 abaAtual.value = idAba;
+                menuMobileAberto.value = false; // Fecha o painel lateral em ecrãs pequenos
+                
                 if (idAba === 'graficos') {
                     nextTick(() => renderizarGraficos());
                 }
