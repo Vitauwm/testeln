@@ -83,7 +83,7 @@ window.ModalMembroComponent = {
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nível de Permissão / Cargo *</label>
                             <select v-model="form.cargo" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white">
                                 <option value="FUNCIONARIO">FUNCIONÁRIO (Regista suas horas)</option>
-                                <option value="GESTOR">GESTOR (Valida horas e relatórios)</option>
+                                <option value="GESTOR">GESTOR (Gerencia projetos, categorias e relatórios)</option>
                                 <option value="ADMINISTRADOR">ADMINISTRADOR (Acesso Total)</option>
                             </select>
                         </div>

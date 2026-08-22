@@ -11,26 +11,46 @@ window.RelatoriosViewComponent = {
     },
     emits: ['aplicar-filtro-rapido', 'exportar-csv', 'imprimir-relatorio'],
     template: `
-        <div class="space-y-6 pb-10 print:pb-0">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
+        <div class="space-y-6 pb-10 print:space-y-4 print:pb-0">
+            <!-- CABEÇALHO EXECUTIVO EXCLUSIVO PARA IMPRESSÃO (PDF) -->
+            <div class="print-only pb-4 border-b-2 border-emerald-600">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-black tracking-wider text-emerald-700">LAINOVA</span>
+                            <span class="text-[9pt] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded border border-emerald-200">Relatório Oficial de Atividades</span>
+                        </div>
+                        <p class="text-[9pt] text-slate-500 mt-1">Painel Consolidado de Banco de Horas e Produtividade Acadêmica</p>
+                    </div>
+                    <div class="text-right text-[8.5pt] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                        <p><strong>Período:</strong> {{ periodoRelatorioTexto }}</p>
+                        <p v-if="filtroRelatorio.membro"><strong>Filtro:</strong> {{ filtroRelatorio.membro }}</p>
+                        <p><strong>Emissão:</strong> {{ new Date().toLocaleDateString('pt-BR') }} às {{ new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTROLES NA TELA (NÃO IMPRIMEM) -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4 no-print">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-file-invoice text-emerald-600"></i> Relatório Geral de Atividades
                     </h2>
                     <p class="text-slate-500 text-sm mt-1">
-                        Período de Análise: <span class="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{{ periodoRelatorioTexto }}</span>
+                        Período de Análise: <span class="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{{ periodoRelatorioTexto }}</span>
                     </p>
                 </div>
-                <div class="flex items-center gap-2 w-full md:w-auto no-print">
-                    <button @click="$emit('exportar-csv')" class="flex-1 md:flex-none bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 transition">
-                        <i class="fa-solid fa-file-csv text-emerald-600"></i> Excel/CSV
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <button @click="$emit('exportar-csv')" class="flex-1 md:flex-none bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 transition text-sm">
+                        <i class="fa-solid fa-file-csv text-emerald-600"></i> Exportar CSV
                     </button>
-                    <button @click="$emit('imprimir-relatorio')" class="flex-1 md:flex-none bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 transition">
+                    <button @click="$emit('imprimir-relatorio')" class="flex-1 md:flex-none bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg font-semibold shadow-sm flex items-center justify-center gap-2 transition text-sm">
                         <i class="fa-solid fa-print"></i> Guardar PDF
                     </button>
                 </div>
             </div>
 
+            <!-- FILTROS (NÃO IMPRIMEM) -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 no-print">
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div class="flex flex-wrap gap-2 w-full sm:w-auto">
@@ -59,127 +79,126 @@ window.RelatoriosViewComponent = {
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 print-break-inside">
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
-                    <div class="absolute right-0 top-0 opacity-5 text-6xl -mt-2 -mr-2"><i class="fa-solid fa-clock"></i></div>
-                    <span class="text-slate-500 text-xs font-bold uppercase mb-1 z-10">Total Registado</span>
-                    <span class="text-3xl font-black text-slate-800 z-10">{{ kpisRelatorio.totalHoras }}<span class="text-lg font-medium text-slate-500">h</span></span>
-                    <span class="text-xs text-slate-400 mt-1 z-10 font-medium">No período selecionado</span>
+            <!-- BLOCO DE KPIS (IMPRESSÃO EQUILIBRADA EM LINHA ÚNICA) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 print:grid-cols-4 gap-4 print:gap-3 print-avoid-break">
+                <div class="bg-white p-5 print:p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <span class="text-slate-500 text-xs uppercase font-bold tracking-wider mb-0.5">Total de Horas</span>
+                    <span class="text-2xl print:text-xl font-black text-slate-800">{{ kpisRelatorio.totalHoras }}<span class="text-sm font-semibold text-slate-500 ml-0.5">h</span></span>
+                    <span class="text-[8pt] text-slate-400 mt-0.5">Carga horária acumulada</span>
                 </div>
                 
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden border-b-4 border-b-emerald-500">
-                    <div class="absolute right-0 top-0 opacity-5 text-emerald-500 text-6xl -mt-2 -mr-2"><i class="fa-solid fa-piggy-bank"></i></div>
-                    <span class="text-emerald-700 text-xs font-bold uppercase mb-1 z-10">Banco (Aprovadas)</span>
-                    <span class="text-3xl font-black text-slate-800 z-10">{{ kpisRelatorio.horasBanco }}<span class="text-lg font-medium text-slate-500">h</span></span>
-                    <span class="text-xs text-slate-400 mt-1 z-10 font-medium">Horas validadas ({{ kpisRelatorio.percBanco }}%)</span>
+                <div class="bg-white p-5 print:p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-emerald-500">
+                    <span class="text-emerald-700 text-xs uppercase font-bold tracking-wider mb-0.5">Membros Ativos</span>
+                    <span class="text-2xl print:text-xl font-black text-slate-800">{{ rankingRelatorio.length }}</span>
+                    <span class="text-[8pt] text-slate-400 mt-0.5">Participantes no período</span>
                 </div>
                 
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
-                    <div class="absolute right-0 top-0 opacity-5 text-6xl -mt-2 -mr-2"><i class="fa-solid fa-list-check"></i></div>
-                    <span class="text-slate-500 text-xs font-bold uppercase mb-1 z-10">Volume de Atividades</span>
-                    <span class="text-3xl font-black text-slate-800 z-10">{{ kpisRelatorio.totalAtividades }}</span>
-                    <span class="text-xs text-slate-400 mt-1 z-10 font-medium">Média: {{ kpisRelatorio.mediaHorasPorAtividade }}h / ativ.</span>
+                <div class="bg-white p-5 print:p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <span class="text-slate-500 text-xs uppercase font-bold tracking-wider mb-0.5">Atividades</span>
+                    <span class="text-2xl print:text-xl font-black text-slate-800">{{ kpisRelatorio.totalAtividades }}</span>
+                    <span class="text-[8pt] text-slate-400 mt-0.5">Média: {{ kpisRelatorio.mediaHorasPorAtividade }}h / registro</span>
                 </div>
                 
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
-                    <div class="absolute right-0 top-0 opacity-5 text-amber-500 text-6xl -mt-2 -mr-2"><i class="fa-solid fa-trophy"></i></div>
-                    <span class="text-amber-600 text-xs font-bold uppercase mb-1 z-10">Destaque do Período</span>
-                    <span class="text-lg font-black text-slate-800 truncate z-10" :title="kpisRelatorio.membroDestaque">{{ kpisRelatorio.membroDestaque || 'N/A' }}</span>
-                    <span class="text-xs text-slate-400 mt-1 z-10 font-medium">Maior acumulador de horas</span>
+                <div class="bg-white p-5 print:p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <span class="text-amber-600 text-xs uppercase font-bold tracking-wider mb-0.5">Destaque</span>
+                    <span class="text-base print:text-sm font-black text-slate-800 truncate" :title="kpisRelatorio.membroDestaque">{{ kpisRelatorio.membroDestaque || 'N/A' }}</span>
+                    <span class="text-[8pt] text-slate-400 mt-0.5">Maior volume de horas</span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 print-break-inside">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h4 class="font-bold text-slate-700 mb-1">Ranking de Horas (Top 10)</h4>
-                    <p class="text-xs text-slate-400 mb-4">Utilizadores com mais horas no período selecionado</p>
-                    <div class="relative h-64 w-full">
+            <!-- BLOCO DE GRÁFICOS (PROPORÇÕES PERFEITAS NO PDF) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 print:grid-cols-2 gap-6 print:gap-4 print-avoid-break">
+                <div class="bg-white p-5 print:p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">Ranking de Horas por Membro</h4>
+                    <p class="text-[8.5pt] text-slate-400 mb-3 no-print">Top 10 membros com mais horas no período</p>
+                    <div class="relative h-60 w-full chart-container-print">
                         <canvas id="chartRelRanking"></canvas>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h4 class="font-bold text-slate-700 mb-1">Distribuição de Carga Horária</h4>
-                    <p class="text-xs text-slate-400 mb-4">Divisão das horas por categoria de atividade</p>
-                    <div class="relative h-64 w-full">
+                <div class="bg-white p-5 print:p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">Distribuição por Categoria</h4>
+                    <p class="text-[8.5pt] text-slate-400 mb-3 no-print">Proporção de horas por tipo de atividade</p>
+                    <div class="relative h-60 w-full chart-container-print">
                         <canvas id="chartRelCategoria"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-1 print-break-inside flex flex-col">
-                    <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                        <h3 class="font-bold text-slate-700 text-sm">Resumo da Equipa</h3>
-                        <span class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-bold">{{ rankingRelatorio.length }} membros</span>
+            <!-- TABELAS DE DETALHAMENTO -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 print:grid-cols-1 gap-6 print:gap-4">
+                <!-- Tabela de Resumo por Membro (Em tela dividida, em impressão empilhada e limpa) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-1 print-avoid-break flex flex-col">
+                    <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider">Resumo por Membro</h3>
+                        <span class="text-[8pt] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">{{ rankingRelatorio.length }} membros</span>
                     </div>
-                    <div class="overflow-x-auto flex-1 max-h-[400px]">
+                    <div class="overflow-x-auto flex-1 max-h-[350px] print:max-h-none">
                         <table class="w-full text-left text-sm">
-                            <thead class="bg-white sticky top-0 shadow-sm z-10">
-                                <tr class="text-slate-500 text-xs uppercase tracking-wider">
-                                    <th class="px-4 py-3 font-semibold">Nome</th>
-                                    <th class="px-4 py-3 font-semibold text-right">Horas</th>
-                                    <th class="px-4 py-3 font-semibold text-center" title="Total de Atividades">Ativ.</th>
+                            <thead class="bg-white sticky top-0 shadow-sm z-10 print:static print:shadow-none">
+                                <tr class="text-slate-500 text-[8pt] uppercase tracking-wider">
+                                    <th class="px-3 py-2 font-semibold">Nome</th>
+                                    <th class="px-3 py-2 font-semibold text-right">Horas</th>
+                                    <th class="px-3 py-2 font-semibold text-center">Ativ.</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                <tr v-for="(m, index) in rankingRelatorio" :key="m.nome" 
-                                    class="hover:bg-slate-50 cursor-pointer transition group" 
-                                    @click="filtroRelatorio.membro = m.nome" title="Clique para filtrar registos deste utilizador">
-                                    <td class="px-4 py-3 font-semibold text-slate-700 flex items-center gap-2">
-                                        <span class="text-xs font-bold text-slate-400 w-3 text-center">{{ index + 1 }}º</span> 
-                                        <span class="group-hover:text-emerald-600 transition-colors">{{ (m.nome || '').split(' ')[0] }}</span>
+                                <tr v-for="(m, index) in rankingRelatorio" :key="m.nome" class="hover:bg-slate-50 transition">
+                                    <td class="px-3 py-2 font-medium text-slate-800 text-xs">
+                                        <span class="text-slate-400 font-bold mr-1">{{ index + 1 }}º</span> {{ m.nome }}
                                     </td>
-                                    <td class="px-4 py-3 text-right text-emerald-600 font-bold">{{ m.horas }}h</td>
-                                    <td class="px-4 py-3 text-center text-slate-500">{{ m.atividades }}</td>
+                                    <td class="px-3 py-2 text-right text-emerald-700 font-bold text-xs">{{ m.horas }}h</td>
+                                    <td class="px-3 py-2 text-center text-slate-500 text-xs">{{ m.atividades }}</td>
                                 </tr>
                                 <tr v-if="rankingRelatorio.length === 0">
-                                    <td colspan="3" class="px-4 py-8 text-center text-slate-400 italic">Nenhum dado no período.</td>
+                                    <td colspan="3" class="px-3 py-6 text-center text-slate-400 italic text-xs">Nenhum dado no período.</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 text-center no-print">
-                        <i class="fa-solid fa-mouse-pointer mr-1"></i> Clique num membro para filtrar a tabela ao lado
-                    </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-2 print-break-inside flex flex-col">
-                    <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex flex-wrap justify-between items-center gap-2">
-                        <h3 class="font-bold text-slate-700 text-sm">
-                            Extrato Detalhado 
-                            <span v-if="filtroRelatorio.membro" class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded ml-1 border border-emerald-100 flex items-center inline-flex">
-                                {{ filtroRelatorio.membro }}
-                                <i class="fa-solid fa-xmark ml-2 cursor-pointer hover:text-red-500" @click="filtroRelatorio.membro = ''" title="Remover filtro"></i>
-                            </span>
+                <!-- Tabela de Registros Detalhados -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-2 print-avoid-break flex flex-col">
+                    <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider">
+                            Extrato Detalhado de Lançamentos
                         </h3>
-                        <span class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-bold">{{ registrosRelatorio.length }} registos</span>
+                        <span class="text-[8pt] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">{{ registrosRelatorio.length }} registros</span>
                     </div>
-                    <div class="overflow-x-auto flex-1 max-h-[400px]">
-                        <table class="w-full text-left whitespace-nowrap text-sm">
-                            <thead class="bg-white sticky top-0 shadow-sm z-10">
-                                <tr class="text-slate-500 text-xs uppercase tracking-wider">
-                                    <th class="px-4 py-3 font-semibold">Data</th>
-                                    <th class="px-4 py-3 font-semibold" v-if="!filtroRelatorio.membro">Utilizador</th>
-                                    <th class="px-4 py-3 font-semibold">Categoria</th>
-                                    <th class="px-4 py-3 font-semibold text-right">Horas</th>
-                                    <th class="px-4 py-3 font-semibold">Descrição da Atividade</th>
+                    <div class="overflow-x-auto flex-1 max-h-[350px] print:max-h-none">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-white sticky top-0 shadow-sm z-10 print:static print:shadow-none">
+                                <tr class="text-slate-500 text-[8pt] uppercase tracking-wider">
+                                    <th class="px-3 py-2 font-semibold">Data</th>
+                                    <th class="px-3 py-2 font-semibold" v-if="!filtroRelatorio.membro">Membro</th>
+                                    <th class="px-3 py-2 font-semibold">Projeto</th>
+                                    <th class="px-3 py-2 font-semibold">Categoria</th>
+                                    <th class="px-3 py-2 font-semibold text-right">Horas</th>
+                                    <th class="px-3 py-2 font-semibold">Descrição</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 <tr v-for="r in registrosRelatorioOrdenados" :key="r.ID" class="hover:bg-slate-50 transition">
-                                    <td class="px-4 py-3 text-slate-500 font-mono text-xs">{{ formatarDataSheet(r.Data) }}</td>
-                                    <td class="px-4 py-3 font-semibold text-slate-700" v-if="!filtroRelatorio.membro">{{ (r.Nome_Membro || '').split(' ')[0] }}</td>
-                                    <td class="px-4 py-3"><span class="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{{ r.Categoria }}</span></td>
-                                    <td class="px-4 py-3 font-bold text-slate-800 text-right">{{ parseFloat(r.Horas_Gastas).toFixed(1) }}h</td>
-                                    <td class="px-4 py-3 text-slate-600 truncate max-w-[250px]" :title="r.Descricao">{{ r.Descricao }}</td>
+                                    <td class="px-3 py-2 text-slate-600 font-mono text-[8pt] whitespace-nowrap">{{ formatarDataSheet(r.Data) }}</td>
+                                    <td class="px-3 py-2 font-medium text-slate-800 text-xs whitespace-nowrap" v-if="!filtroRelatorio.membro">{{ r.Nome_Membro }}</td>
+                                    <td class="px-3 py-2 text-slate-600 text-xs whitespace-nowrap">{{ r.Projeto || 'Atividade' }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap"><span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-[7.5pt] font-bold">{{ r.Categoria }}</span></td>
+                                    <td class="px-3 py-2 font-bold text-slate-800 text-right text-xs whitespace-nowrap">{{ parseFloat(r.Horas_Gastas).toFixed(1) }}h</td>
+                                    <td class="px-3 py-2 text-slate-600 text-xs truncate max-w-[200px] print:max-w-none print:whitespace-normal" :title="r.Descricao">{{ r.Descricao }}</td>
                                 </tr>
                                 <tr v-if="registrosRelatorio.length === 0">
-                                    <td colspan="5" class="px-4 py-12 text-center text-slate-400">Nenhum registo encontrado para os filtros selecionados.</td>
+                                    <td colspan="6" class="px-3 py-6 text-center text-slate-400 italic text-xs">Nenhum registro encontrado.</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
+            </div>
+
+            <!-- RODAPÉ EXECUTIVO PARA IMPRESSÃO -->
+            <div class="print-only mt-6 pt-3 border-t border-slate-300 flex justify-between items-center text-[7.5pt] text-slate-400">
+                <span>LAINOVA • Liga Acadêmica de Inovação • Relatório gerado automaticamente</span>
+                <span>Página 1 de 1</span>
             </div>
         </div>
     `

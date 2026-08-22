@@ -2,7 +2,6 @@ window.SidebarComponent = {
     props: {
         abas: { type: Array, required: true },
         abaAtual: { type: String, required: true },
-        totalPendentes: { type: Number, default: 0 },
         menuMobileAberto: { type: Boolean, default: false },
         cargoUsuario: { type: String, default: '' }
     },
@@ -38,10 +37,6 @@ window.SidebarComponent = {
                             <i :class="aba.icon" class="w-5 text-center"></i>
                             <span>{{ aba.label }}</span>
                         </div>
-                        <span v-if="aba.id === 'aprovacoes' && totalPendentes > 0" 
-                              class="bg-amber-500 text-slate-900 text-xs px-2 py-0.5 rounded-full font-bold no-print">
-                            {{ totalPendentes }}
-                        </span>
                     </button>
                 </nav>
 

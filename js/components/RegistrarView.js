@@ -1,5 +1,6 @@
 window.RegistrarViewComponent = {
     props: {
+        projetos: { type: Array, default: () => ['Atividade'] },
         categorias: { type: Array, default: () => [] },
         modoRegistro: { type: String, default: 'manual' },
         form: { type: Object, required: true },
@@ -34,9 +35,8 @@ window.RegistrarViewComponent = {
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                 <form @submit.prevent="$emit('salvar-registro')" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Usuário proprietário vinculado automaticamente -->
                         <div>
-                            <label class="block text-sm font-semibold mb-1 text-slate-700">Membro Responsável (Automático)</label>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Membro Responsável (Automático)</label>
                             <div class="flex items-center gap-3 w-full border border-slate-200 p-2.5 rounded-lg bg-slate-100 text-slate-700">
                                 <div class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
                                     {{ (usuario.nome || 'U').substring(0,2).toUpperCase() }}
@@ -49,17 +49,33 @@ window.RegistrarViewComponent = {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold mb-1 text-slate-700">Data da Atividade</label>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Data da Atividade *</label>
                             <input v-model="form.data" type="date" required class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition text-sm" />
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold mb-1 text-slate-700">Hora de Início</label>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Projeto *</label>
+                            <select v-model="form.projeto" required class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition text-sm">
+                                <option value="" disabled>Selecione o projeto...</option>
+                                <option v-for="p in projetos" :key="p" :value="p">{{ p }}</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Categoria da Atividade *</label>
+                            <select v-model="form.categoria" required class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition text-sm">
+                                <option value="" disabled>Classifique a sua atividade...</option>
+                                <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Hora de Início *</label>
                             <input v-model="form.inicio" type="time" required class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition font-mono text-sm" />
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold mb-1 text-slate-700">Hora de Término</label>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Hora de Término *</label>
                             <input v-model="form.termino" type="time" required class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition font-mono text-sm" />
                         </div>
                         
@@ -69,25 +85,17 @@ window.RegistrarViewComponent = {
                                 <span class="text-2xl font-bold" :class="duracaoCalculadaHoras > 0 ? 'text-emerald-700' : 'text-slate-400'">{{ duracaoCalculadaHoras }} horas</span>
                             </div>
                         </div>
-                        
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-semibold mb-1 text-slate-700">Categoria da Atividade</label>
-                            <select v-model="form.categoria" required class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition text-sm">
-                                <option value="" disabled>Classifique a sua atividade...</option>
-                                <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
-                            </select>
-                        </div>
 
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-semibold mb-1 text-slate-700">Descrição Detalhada</label>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descrição Detalhada *</label>
                             <textarea v-model="form.descricao" rows="3" required placeholder="Descreva brevemente o que foi feito..." class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition resize-none text-sm"></textarea>
                         </div>
                     </div>
 
                     <div class="flex justify-end pt-4 border-t border-slate-100">
                         <button type="submit" :disabled="enviandoRegistro" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-md transition disabled:opacity-70">
-                            <span v-if="enviandoRegistro"><i class="fa-solid fa-spinner fa-spin"></i> A enviar...</span>
-                            <span v-else><i class="fa-regular fa-paper-plane"></i> Enviar para Validação</span>
+                            <span v-if="enviandoRegistro"><i class="fa-solid fa-spinner fa-spin"></i> A registar...</span>
+                            <span v-else><i class="fa-solid fa-check"></i> Registar Atividade</span>
                         </button>
                     </div>
                 </form>

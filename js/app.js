@@ -7,12 +7,13 @@ const app = createApp({
         'app-header': window.HeaderComponent,
         'dashboard-view': window.DashboardViewComponent,
         'graficos-view': window.GraficosViewComponent,
-        'aprovacoes-view': window.AprovacoesViewComponent,
+        'projetos-categorias-view': window.ProjetosCategoriasViewComponent,
         'registrar-view': window.RegistrarViewComponent,
         'membros-view': window.MembrosViewComponent,
         'historico-view': window.HistoricoViewComponent,
         'relatorios-view': window.RelatoriosViewComponent,
-        'modal-membro': window.ModalMembroComponent
+        'modal-membro': window.ModalMembroComponent,
+        'modal-editar-registro': window.ModalEditarRegistroComponent
     },
     setup() {
         const usuarioAutenticado = ref(false);
@@ -27,7 +28,13 @@ const app = createApp({
         const carregandoDados = ref(false);
         const enviandoRegistro = ref(false);
         const enviandoMembro = ref(false);
+        const carregandoProjetosCategorias = ref(false);
         const modalMembroAberto = ref(false);
+
+        // Modal de Edição de Registro
+        const modalEdicaoAberto = ref(false);
+        const registroParaEdicao = ref({});
+        const enviandoEdicao = ref(false);
 
         // Relógio e Data
         const dataAtualObj = ref(new Date());
@@ -35,10 +42,15 @@ const app = createApp({
         const horaFormatada = computed(() => dataAtualObj.value.toLocaleTimeString('pt-PT'));
         const dataFormatada = computed(() => new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(dataAtualObj.value));
 
-        // Dados
+        // Dados da Aplicação
         const membros = ref([]);
         const registros = ref([]);
-        const categorias = ref(window.CATEGORIAS_ATIVIDADES);
+        const projetos = ref(['Atividade']);
+        const categorias = ref(['Ensino', 'Pesquisa', 'Extensão', 'Reuniões', 'Evento', 'Divulgação', 'Administrativo', 'Projeto', 'Outros']);
+
+        const podeEditarExcluir = computed(() => {
+            return usuarioAtual.value.cargo === 'ADMINISTRADOR' || usuarioAtual.value.cargo === 'GESTOR';
+        });
 
         const chamarBackend = async (payload) => {
             const res = await fetch(window.API_URL, {
@@ -115,6 +127,8 @@ const app = createApp({
                 const data = await chamarBackend({ acao: 'obterDados', token: tokenSessao.value });
                 membros.value = data.membros || [];
                 registros.value = data.registros || [];
+                if (data.projetos && data.projetos.length > 0) projetos.value = data.projetos;
+                if (data.categorias && data.categorias.length > 0) categorias.value = data.categorias;
                 
                 if (abaAtual.value === 'graficos') nextTick(() => renderizarGraficos());
                 if (abaAtual.value === 'relatorios') nextTick(() => renderizarGraficosRelatorio());
@@ -125,24 +139,19 @@ const app = createApp({
             }
         };
 
-        const totalHorasAprovadasGeral = computed(() => {
-            return registros.value.filter(r => r.Status === 'Aprovada').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0).toFixed(1);
+        const totalHorasGeral = computed(() => {
+            return registros.value.reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0).toFixed(1);
         });
 
-        const totalHorasPendentesGeral = computed(() => {
-            return registros.value.filter(r => r.Status === 'Pendente').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0).toFixed(1);
-        });
+        const totalLancamentos = computed(() => registros.value.length);
 
         const acumuladoMembros = computed(() => {
             return membros.value.map(m => {
-                const aprovadas = registros.value.filter(r => (r.Nome_Membro === m.nome || r.Login_Membro === m.login) && r.Status === 'Aprovada').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0);
-                const pendentes = registros.value.filter(r => (r.Nome_Membro === m.nome || r.Login_Membro === m.login) && r.Status === 'Pendente').reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0);
-                return { nome: m.nome, login: m.login, cargo: m.cargo, aprovadas: aprovadas.toFixed(1), pendentes: pendentes.toFixed(1) };
-            }).sort((a,b) => parseFloat(b.aprovadas) - parseFloat(a.aprovadas));
+                const regsMembro = registros.value.filter(r => (r.Nome_Membro === m.nome || r.Login_Membro === m.login));
+                const totalHoras = regsMembro.reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0).toFixed(1);
+                return { nome: m.nome, login: m.login, cargo: m.cargo, totalHoras, totalAtividades: regsMembro.length };
+            }).sort((a,b) => parseFloat(b.totalHoras) - parseFloat(a.totalHoras));
         });
-
-        const registrosPendentes = computed(() => registros.value.filter(r => r.Status === 'Pendente').sort((a, b) => new Date(b.Data) - new Date(a.Data)));
-        const totalPendentes = computed(() => registrosPendentes.value.length);
 
         const mudarAba = (idAba) => {
             abaAtual.value = idAba;
@@ -174,6 +183,100 @@ const app = createApp({
             }
             if(iso.includes('T')) iso = iso.split('T')[0];
             return new Date(iso + 'T00:00:00').getTime();
+        };
+
+        // Gerenciamento de Edição e Exclusão de Registros de Horas
+        const abrirEdicaoRegistro = (reg) => {
+            registroParaEdicao.value = { ...reg };
+            modalEdicaoAberto.value = true;
+        };
+
+        const salvarEdicaoRegistro = async (dadosAtualizados) => {
+            enviandoEdicao.value = true;
+            try {
+                await chamarBackend({
+                    acao: 'editarRegistro',
+                    token: tokenSessao.value,
+                    ...dadosAtualizados
+                });
+                modalEdicaoAberto.value = false;
+                await fetchDados();
+                alert('Lançamento atualizado com sucesso!');
+            } catch (e) {
+                alert('Erro ao editar lançamento: ' + e.message);
+            } finally {
+                enviandoEdicao.value = false;
+            }
+        };
+
+        const excluirRegistro = async (idRegistro) => {
+            if (!confirm(`Deseja realmente eliminar o lançamento ID ${idRegistro}?`)) return;
+            carregandoDados.value = true;
+            try {
+                await chamarBackend({
+                    acao: 'excluirRegistro',
+                    token: tokenSessao.value,
+                    idRegistro
+                });
+                await fetchDados();
+                alert('Lançamento removido com sucesso!');
+            } catch (e) {
+                alert('Erro ao excluir lançamento: ' + e.message);
+                carregandoDados.value = false;
+            }
+        };
+
+        // Gerenciamento de Projetos e Categorias
+        const adicionarProjeto = async (nomeProjeto) => {
+            carregandoProjetosCategorias.value = true;
+            try {
+                await chamarBackend({ acao: 'adicionarProjeto', token: tokenSessao.value, nome: nomeProjeto });
+                await fetchDados();
+                alert(`Projeto "${nomeProjeto}" adicionado com sucesso!`);
+            } catch (e) {
+                alert("Erro ao adicionar projeto: " + e.message);
+            } finally {
+                carregandoProjetosCategorias.value = false;
+            }
+        };
+
+        const excluirProjeto = async (nomeProjeto) => {
+            if (!confirm(`Deseja realmente remover o projeto "${nomeProjeto}"?`)) return;
+            carregandoProjetosCategorias.value = true;
+            try {
+                await chamarBackend({ acao: 'excluirProjeto', token: tokenSessao.value, nome: nomeProjeto });
+                await fetchDados();
+            } catch (e) {
+                alert("Erro ao remover projeto: " + e.message);
+            } finally {
+                carregandoProjetosCategorias.value = false;
+            }
+        };
+
+        const adicionarCategoria = async (nomeCategoria) => {
+            carregandoProjetosCategorias.value = true;
+            try {
+                await chamarBackend({ acao: 'adicionarCategoria', token: tokenSessao.value, nome: nomeCategoria });
+                await fetchDados();
+                alert(`Categoria "${nomeCategoria}" adicionada com sucesso!`);
+            } catch (e) {
+                alert("Erro ao adicionar categoria: " + e.message);
+            } finally {
+                carregandoProjetosCategorias.value = false;
+            }
+        };
+
+        const excluirCategoria = async (nomeCategoria) => {
+            if (!confirm(`Deseja realmente remover a categoria "${nomeCategoria}"?`)) return;
+            carregandoProjetosCategorias.value = true;
+            try {
+                await chamarBackend({ acao: 'excluirCategoria', token: tokenSessao.value, nome: nomeCategoria });
+                await fetchDados();
+            } catch (e) {
+                alert("Erro ao remover categoria: " + e.message);
+            } finally {
+                carregandoProjetosCategorias.value = false;
+            }
         };
 
         // Relatórios
@@ -212,8 +315,7 @@ const app = createApp({
                 const rTime = parseDateToTime(r.Data);
                 const noPeriodo = (!inicioTime || rTime >= inicioTime) && (!fimTime || rTime <= fimTime);
                 const matchMembro = filtroRelatorio.value.membro ? r.Nome_Membro === filtroRelatorio.value.membro : true;
-                const isValido = r.Status !== 'Recusada' && r.Status !== 'Rejeitada';
-                return noPeriodo && matchMembro && isValido;
+                return noPeriodo && matchMembro;
             });
         });
 
@@ -231,16 +333,12 @@ const app = createApp({
         const kpisRelatorio = computed(() => {
             const regs = registrosRelatorio.value;
             let totalHoras = 0;
-            let horasBanco = 0;
             const membrosCount = {};
             
             regs.forEach(r => {
                 const h = parseFloat(r.Horas_Gastas) || 0;
                 totalHoras += h;
-                if(r.Status === 'Aprovada') {
-                    horasBanco += h;
-                    membrosCount[r.Nome_Membro] = (membrosCount[r.Nome_Membro] || 0) + h;
-                }
+                membrosCount[r.Nome_Membro] = (membrosCount[r.Nome_Membro] || 0) + h;
             });
 
             let membroDestaque = '';
@@ -249,13 +347,10 @@ const app = createApp({
                 if (h > maxHoras) { maxHoras = h; membroDestaque = nome; }
             }
 
-            const percBanco = totalHoras > 0 ? ((horasBanco / totalHoras) * 100).toFixed(0) : 0;
             const mediaPorAtiv = regs.length > 0 ? (totalHoras / regs.length).toFixed(1) : 0;
 
             return {
                 totalHoras: totalHoras.toFixed(1),
-                horasBanco: horasBanco.toFixed(1),
-                percBanco: percBanco,
                 totalAtividades: regs.length,
                 mediaHorasPorAtividade: mediaPorAtiv,
                 membroDestaque: membroDestaque
@@ -265,7 +360,6 @@ const app = createApp({
         const rankingRelatorio = computed(() => {
             const mapa = {};
             registrosRelatorio.value.forEach(r => {
-                if(r.Status !== 'Aprovada') return;
                 if(!mapa[r.Nome_Membro]) mapa[r.Nome_Membro] = { nome: r.Nome_Membro, horas: 0, atividades: 0 };
                 mapa[r.Nome_Membro].horas += (parseFloat(r.Horas_Gastas) || 0);
                 mapa[r.Nome_Membro].atividades += 1;
@@ -289,7 +383,7 @@ const app = createApp({
                 data: {
                     labels: rankData.map(d => (d.nome || '').split(' ')[0]),
                     datasets: [{
-                        label: 'Horas Aprovadas',
+                        label: 'Horas Registadas',
                         data: rankData.map(d => d.horas),
                         backgroundColor: '#10b981',
                         borderRadius: 6,
@@ -338,10 +432,10 @@ const app = createApp({
         }, { deep: true });
 
         const exportarCSV = () => {
-            let csv = "Data,Membro,Categoria,Horas,Status,Descricao\n";
+            let csv = "Data,Membro,Projeto,Categoria,Horas,Descricao\n";
             registrosRelatorioOrdenados.value.forEach(r => {
                 let desc = (r.Descricao || '').replace(/"/g, '""');
-                csv += `${formatarDataSheet(r.Data)},"${r.Nome_Membro}","${r.Categoria}",${r.Horas_Gastas},"${r.Status}","${desc}"\n`;
+                csv += `${formatarDataSheet(r.Data)},"${r.Nome_Membro}","${r.Projeto || 'Atividade'}","${r.Categoria}",${r.Horas_Gastas},"${desc}"\n`;
             });
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: "text/csv;charset=utf-8" });
             const url = URL.createObjectURL(blob);
@@ -373,10 +467,8 @@ const app = createApp({
             if (!ctxTemp || !ctxCat) return;
 
             Chart.defaults.font.family = "'Inter', sans-serif";
-            const registrosValidos = registros.value.filter(r => r.Status === 'Aprovada');
-            
             const dadosTemporais = {};
-            registrosValidos.forEach(r => {
+            registros.value.forEach(r => {
                 let d = new Date(r.Data);
                 if (isNaN(d.getTime()) && r.Data && String(r.Data).includes('/')) {
                     const parts = String(r.Data).split('/');
@@ -405,7 +497,7 @@ const app = createApp({
                 data: {
                     labels: Object.keys(dadosTemporais),
                     datasets: [{
-                        label: 'Horas Aprovadas',
+                        label: 'Horas Registadas',
                         data: Object.values(dadosTemporais),
                         backgroundColor: '#3b82f6',
                         borderRadius: 4
@@ -415,7 +507,7 @@ const app = createApp({
             });
 
             const dadosCategorias = {};
-            registrosValidos.forEach(r => {
+            registros.value.forEach(r => {
                 const cat = r.Categoria || 'Outros';
                 dadosCategorias[cat] = (dadosCategorias[cat] || 0) + (parseFloat(r.Horas_Gastas) || 0);
             });
@@ -432,22 +524,6 @@ const app = createApp({
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
-        };
-
-        const processarStatus = async (idRegistro, novoStatus) => {
-            carregandoDados.value = true;
-            try {
-                await chamarBackend({
-                    acao: "atualizarStatus",
-                    token: tokenSessao.value,
-                    idRegistro,
-                    novoStatus
-                });
-                await fetchDados();
-            } catch (err) {
-                alert("Erro ao validar: " + err.message);
-                carregandoDados.value = false;
-            }
         };
 
         const salvarMembro = async (formData) => {
@@ -507,9 +583,10 @@ const app = createApp({
         const modoRegistro = ref('manual');
         const form = ref({
             data: new Date().toISOString().split('T')[0],
+            projeto: 'Atividade',
+            categoria: '',
             inicio: '',
             termino: '',
-            categoria: '',
             descricao: ''
         });
 
@@ -523,6 +600,7 @@ const app = createApp({
 
         const salvarRegistro = async () => {
             if (duracaoCalculadaHoras.value <= 0) { alert("Horário inválido. Verifique o início e fim."); return; }
+            if (!form.value.categoria) { alert("Selecione uma categoria."); return; }
             enviandoRegistro.value = true;
             const dataFormatadaStr = form.value.data.split('-').reverse().join('/');
 
@@ -531,11 +609,19 @@ const app = createApp({
                     acao: "inserir",
                     token: tokenSessao.value,
                     data: dataFormatadaStr,
+                    projeto: form.value.projeto || 'Atividade',
                     categoria: form.value.categoria,
                     horas: duracaoCalculadaHoras.value,
                     descricao: form.value.descricao + ` (${form.value.inicio} - ${form.value.termino})`
                 });
-                form.value = { data: new Date().toISOString().split('T')[0], inicio: '', termino: '', categoria: '', descricao: '' };
+                form.value = { 
+                    data: new Date().toISOString().split('T')[0], 
+                    projeto: projetos.value[0] || 'Atividade',
+                    categoria: '', 
+                    inicio: '', 
+                    termino: '', 
+                    descricao: '' 
+                };
                 mudarAba('historico');
                 await fetchDados();
             } catch (err) {
@@ -587,10 +673,11 @@ const app = createApp({
             fazerLogin, fazerLogout,
             abas, abaAtual, tituloAbaAtual: computed(() => abas.value.find(a => a.id === abaAtual.value)?.label),
             horaFormatada, dataFormatada, menuMobileAberto, mudarAba,
-            membros, registros, categorias, carregandoDados, enviandoRegistro, enviandoMembro,
-            totalHorasAprovadasGeral, totalHorasPendentesGeral, acumuladoMembros,
-            registrosPendentes, totalPendentes, processarStatus, fetchDados,
+            membros, registros, projetos, categorias, carregandoDados, enviandoRegistro, enviandoMembro, carregandoProjetosCategorias,
+            totalHorasGeral, totalLancamentos, acumuladoMembros, fetchDados,
+            adicionarProjeto, excluirProjeto, adicionarCategoria, excluirCategoria,
             modalMembroAberto, salvarMembro, alternarStatusMembro, removerMembro,
+            modalEdicaoAberto, registroParaEdicao, enviandoEdicao, abrirEdicaoRegistro, salvarEdicaoRegistro, excluirRegistro, podeEditarExcluir,
             periodoGrafico, mudarPeriodoGrafico,
             modoRegistro, form, duracaoCalculadaHoras, salvarRegistro,
             timerAtivo, cronometroDisplay, iniciarCronometro, pararCronometro,
