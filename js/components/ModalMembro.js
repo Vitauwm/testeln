@@ -46,7 +46,7 @@ window.ModalMembroComponent = {
                 <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                     <div>
                         <h3 class="text-xl font-bold text-slate-800">Registar Novo Membro</h3>
-                        <p class="text-xs text-slate-500 mt-0.5">O novo membro receberá acesso para entrar com login e palavra-passe.</p>
+                        <p class="text-xs text-slate-500 mt-0.5">O novo membro receberá uma senha temporária e definirá a definitiva no primeiro acesso.</p>
                     </div>
                     <button @click="$emit('fechar-modal')" class="text-slate-400 hover:text-slate-700 text-xl"><i class="fa-solid fa-xmark"></i></button>
                 </div>
@@ -68,9 +68,9 @@ window.ModalMembroComponent = {
                             <input v-model="form.login" type="text" required maxlength="30" placeholder="Ex: joao.silva" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
                         </div>
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Palavra-passe Inicial *</label>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Palavra-passe Inicial Temporária *</label>
                             <div class="relative">
-                                <input v-model="form.senha" :type="mostrarSenha ? 'text' : 'password'" required maxlength="100" placeholder="Defina a senha" class="w-full border border-slate-300 rounded-lg p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
+                                <input v-model="form.senha" :type="mostrarSenha ? 'text' : 'password'" required minlength="6" maxlength="100" placeholder="Defina a senha inicial" class="w-full border border-slate-300 rounded-lg p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
                                 <button type="button" @click="mostrarSenha = !mostrarSenha" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" tabindex="-1">
                                     <i :class="mostrarSenha ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'"></i>
                                 </button>

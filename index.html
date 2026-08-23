@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LAINOVA - Painel Administrativo</title>
+    <title>LAINOVA - Gestão de Atividades</title>
     
     <!-- Bibliotecas Externas (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,11 +18,38 @@
 
 <div id="app" v-cloak class="w-full h-full relative">
 
-    <!-- TELA DE LOGIN (Quando desautenticado) -->
+    <!-- CONTAINER GLOBAL DE TOASTS -->
+    <toast-container :toasts="toasts" @fechar-toast="fecharToast"></toast-container>
+
+    <!-- MODAL DE CONFIRMAÇÃO GLOBAL (Substitui confirm()) -->
+    <modal-confirmacao 
+        :aberto="modalConfirmacao.aberto"
+        :titulo="modalConfirmacao.titulo"
+        :mensagem="modalConfirmacao.mensagem"
+        :tipo="modalConfirmacao.tipo"
+        :texto-confirmar="modalConfirmacao.textoConfirmar"
+        :texto-cancelar="modalConfirmacao.textoCancelar"
+        :carregando="modalConfirmacao.carregando"
+        @confirmar="executarConfirmacao"
+        @cancelar="modalConfirmacao.aberto = false">
+    </modal-confirmacao>
+
+    <!-- MODAL DE ALTERAÇÃO DE SENHA / PRIMEIRO ACESSO -->
+    <modal-alterar-senha
+        :aberto="modalSenhaAberto"
+        :primeiro-acesso="primeiroAcessoObrigatorio"
+        :enviando="enviandoSenha"
+        :erro="erroSenha"
+        @salvar-senha="salvarNovaSenha"
+        @fechar="modalSenhaAberto = false">
+    </modal-alterar-senha>
+
+    <!-- TELA DE LOGIN -->
     <login-view 
         v-if="!usuarioAutenticado" 
         :carregando-login="carregandoLogin" 
         :mensagem-erro="mensagemErroLogin"
+        :mensagem-sucesso="mensagemSucessoLogin"
         @fazer-login="fazerLogin">
     </login-view>
 
@@ -56,7 +83,8 @@
                 :data-formatada="dataFormatada"
                 :usuario="usuarioAtual"
                 @abrir-menu="menuMobileAberto = true"
-                @fazer-logout="fazerLogout">
+                @fazer-logout="fazerLogout"
+                @abrir-alterar-senha="modalSenhaAberto = true">
             </app-header>
 
             <!-- CONTAINER DE TELAS -->
@@ -90,16 +118,21 @@
                     @parar-cronometro="pararCronometro">
                 </registrar-view>
 
-                <!-- TELA 3: HISTÓRICO (Com Edição e Exclusão) -->
+                <!-- TELA 3: HISTÓRICO (Com Paginação Real Backend) -->
                 <historico-view 
                     v-if="abaAtual === 'historico'"
-                    :registros-ordenados="registrosOrdenados"
+                    :registros="registros"
+                    :paginacao="paginacaoHistorico"
+                    :filtro-membro="filtroMembroHistorico"
                     :formatar-data-sheet="formatarDataSheet"
                     :cargo-usuario="usuarioAtual.cargo"
                     :membros="membros"
                     :pode-editar-excluir="podeEditarExcluir"
+                    :carregando="carregandoDados"
                     @abrir-edicao="abrirEdicaoRegistro"
-                    @excluir-registro="excluirRegistro">
+                    @solicitar-exclusao="solicitarExclusaoRegistro"
+                    @mudar-pagina="mudarPaginaHistorico"
+                    @mudar-filtro-membro="mudarFiltroMembroHistorico">
                 </historico-view>
 
                 <!-- TELA 4: GRÁFICOS & ANÁLISES (Admin/Gestor) -->
@@ -177,6 +210,9 @@
 
 <!-- Scripts Carregados Sequencialmente -->
 <script src="js/config.js"></script>
+<script src="js/components/ToastContainer.js"></script>
+<script src="js/components/ModalConfirmacao.js"></script>
+<script src="js/components/ModalAlterarSenha.js"></script>
 <script src="js/components/LoginView.js"></script>
 <script src="js/components/Sidebar.js"></script>
 <script src="js/components/Header.js"></script>

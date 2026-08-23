@@ -1,7 +1,8 @@
 window.LoginViewComponent = {
     props: {
         carregandoLogin: { type: Boolean, default: false },
-        mensagemErro: { type: String, default: '' }
+        mensagemErro: { type: String, default: '' },
+        mensagemSucesso: { type: String, default: '' }
     },
     emits: ['fazer-login'],
     data() {
@@ -12,7 +13,7 @@ window.LoginViewComponent = {
         };
     },
     methods: {
-        submeter() {
+        submeterLogin() {
             if (!this.login.trim() || !this.senha) return;
             this.$emit('fazer-login', { login: this.login.trim(), senha: this.senha });
         }
@@ -28,15 +29,22 @@ window.LoginViewComponent = {
                         <i class="fa-solid fa-clock-rotate-left text-3xl"></i>
                     </div>
                     <h1 class="text-2xl font-black text-slate-800 tracking-wider">LAINOVA</h1>
-                    <p class="text-xs text-slate-500 font-medium mt-1">Sistema Interno de Gestão de Atividades</p>
+                    <p class="text-xs text-slate-500 font-medium mt-1">Sistema de Gestão de Atividades</p>
                 </div>
 
+                <!-- ALERTA DE ERRO -->
                 <div v-if="mensagemErro" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-start gap-3">
                     <i class="fa-solid fa-circle-exclamation text-red-500 mt-0.5 text-base shrink-0"></i>
                     <span>{{ mensagemErro }}</span>
                 </div>
 
-                <form @submit.prevent="submeter" class="space-y-5">
+                <!-- ALERTA DE SUCESSO -->
+                <div v-if="mensagemSucesso" class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-start gap-3">
+                    <i class="fa-solid fa-circle-check text-emerald-600 mt-0.5 text-base shrink-0"></i>
+                    <span>{{ mensagemSucesso }}</span>
+                </div>
+
+                <form @submit.prevent="submeterLogin" class="space-y-5">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Utilizador / Login</label>
                         <div class="relative">
@@ -70,8 +78,7 @@ window.LoginViewComponent = {
                                 type="button" 
                                 @click="mostrarSenha = !mostrarSenha" 
                                 class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
-                                tabindex="-1"
-                            >
+                                tabindex="-1">
                                 <i :class="mostrarSenha ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'"></i>
                             </button>
                         </div>
@@ -80,8 +87,7 @@ window.LoginViewComponent = {
                     <button 
                         type="submit" 
                         :disabled="carregandoLogin" 
-                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/30 transition duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
-                    >
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/30 transition duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2">
                         <i v-if="carregandoLogin" class="fa-solid fa-circle-notch fa-spin"></i>
                         <span v-if="carregandoLogin">A validar credenciais...</span>
                         <span v-else class="flex items-center gap-2"><i class="fa-solid fa-arrow-right-to-bracket"></i> Iniciar Sessão</span>
@@ -90,7 +96,7 @@ window.LoginViewComponent = {
 
                 <div class="mt-8 pt-6 border-t border-slate-100 text-center">
                     <p class="text-xs text-slate-400">
-                        <i class="fa-solid fa-shield-halved mr-1 text-slate-400"></i> Acesso restrito com autenticação validada no servidor.
+                        <i class="fa-solid fa-shield-halved mr-1 text-slate-400"></i> Acesso seguro com criptografia validada no servidor.
                     </p>
                 </div>
             </div>

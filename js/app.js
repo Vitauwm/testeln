@@ -2,6 +2,9 @@ const { createApp, ref, computed, onMounted, onUnmounted, nextTick, watch } = Vu
 
 const app = createApp({
     components: {
+        'toast-container': window.ToastContainerComponent,
+        'modal-confirmacao': window.ModalConfirmacaoComponent,
+        'modal-alterar-senha': window.ModalAlterarSenhaComponent,
         'login-view': window.LoginViewComponent,
         'app-sidebar': window.SidebarComponent,
         'app-header': window.HeaderComponent,
@@ -16,12 +19,74 @@ const app = createApp({
         'modal-editar-registro': window.ModalEditarRegistroComponent
     },
     setup() {
+        // Estado de Autenticação
         const usuarioAutenticado = ref(false);
         const tokenSessao = ref(sessionStorage.getItem('lainova_session_token') || '');
-        const usuarioAtual = ref({ login: '', nome: '', cargo: '', id: '' });
+        const usuarioAtual = ref({ login: '', nome: '', cargo: '', id: '', primeiroAcesso: false });
         const carregandoLogin = ref(false);
         const mensagemErroLogin = ref('');
+        const mensagemSucessoLogin = ref('');
 
+        // Modal de Alteração de Senha & Primeiro Acesso Obrigatório
+        const modalSenhaAberto = ref(false);
+        const primeiroAcessoObrigatorio = ref(false);
+        const enviandoSenha = ref(false);
+        const erroSenha = ref('');
+
+        // Sistema de Notificações Toast
+        const toasts = ref([]);
+        let toastSeq = 0;
+        const mostrarToast = (tipo, mensagem) => {
+            const id = ++toastSeq;
+            toasts.value.push({ id, tipo, mensagem });
+            setTimeout(() => fecharToast(id), 4000);
+        };
+        const fecharToast = (id) => {
+            toasts.value = toasts.value.filter(t => t.id !== id);
+        };
+
+        // Modal de Confirmação Customizado (Substitui confirm())
+        const modalConfirmacao = ref({
+            aberto: false,
+            titulo: '',
+            mensagem: '',
+            tipo: 'destrutivo',
+            textoConfirmar: 'Confirmar',
+            textoCancelar: 'Cancelar',
+            carregando: false,
+            aoConfirmar: null
+        });
+
+        const abrirConfirmacao = ({ titulo, mensagem, tipo = 'destrutivo', textoConfirmar = 'Confirmar', textoCancelar = 'Cancelar', aoConfirmar }) => {
+            modalConfirmacao.value = {
+                aberto: true,
+                titulo,
+                mensagem,
+                tipo,
+                textoConfirmar,
+                textoCancelar,
+                carregando: false,
+                aoConfirmar
+            };
+        };
+
+        const executarConfirmacao = async () => {
+            if (typeof modalConfirmacao.value.aoConfirmar === 'function') {
+                modalConfirmacao.value.carregando = true;
+                try {
+                    await modalConfirmacao.value.aoConfirmar();
+                    modalConfirmacao.value.aberto = false;
+                } catch (e) {
+                    mostrarToast('erro', e.message || 'Erro ao processar ação.');
+                } finally {
+                    modalConfirmacao.value.carregando = false;
+                }
+            } else {
+                modalConfirmacao.value.aberto = false;
+            }
+        };
+
+        // Navegação
         const abas = ref(window.ABAS_NAVEGACAO);
         const abaAtual = ref('dashboard');
         const menuMobileAberto = ref(false);
@@ -48,10 +113,24 @@ const app = createApp({
         const projetos = ref(['Atividade']);
         const categorias = ref(['Ensino', 'Pesquisa', 'Extensão', 'Reuniões', 'Evento', 'Divulgação', 'Administrativo', 'Projeto', 'Outros']);
 
+        // Paginação do Histórico (Backend)
+        const paginacaoHistorico = ref({
+            paginaAtual: 1,
+            limite: 100,
+            totalRegistros: 0,
+            totalPaginas: 1,
+            temProximaPagina: false,
+            temPaginaAnterior: false,
+            de: 0,
+            ate: 0
+        });
+        const filtroMembroHistorico = ref('');
+
         const podeEditarExcluir = computed(() => {
             return usuarioAtual.value.cargo === 'ADMINISTRADOR' || usuarioAtual.value.cargo === 'GESTOR';
         });
 
+        // Comunicação Segura com o Backend
         const chamarBackend = async (payload) => {
             const res = await fetch(window.API_URL, {
                 method: "POST",
@@ -72,14 +151,30 @@ const app = createApp({
         const fazerLogin = async ({ login, senha }) => {
             carregandoLogin.value = true;
             mensagemErroLogin.value = '';
+            mensagemSucessoLogin.value = '';
             try {
                 const res = await chamarBackend({ acao: 'login', login, senha });
                 tokenSessao.value = res.token;
                 sessionStorage.setItem('lainova_session_token', res.token);
-                usuarioAtual.value = { login: res.login, nome: res.nome, cargo: res.cargo, id: res.id || '' };
+                usuarioAtual.value = { 
+                    login: res.login, 
+                    nome: res.nome, 
+                    cargo: res.cargo, 
+                    id: res.id || '',
+                    primeiroAcesso: !!res.primeiroAcesso
+                };
                 usuarioAutenticado.value = true;
-                abaAtual.value = 'dashboard';
-                await fetchDados();
+
+                // Se for primeiro acesso, bloqueia e exige nova senha
+                if (res.primeiroAcesso) {
+                    primeiroAcessoObrigatorio.value = true;
+                    modalSenhaAberto.value = true;
+                    mostrarToast('aviso', 'Primeiro acesso detectado. Defina a sua palavra-passe definitiva.');
+                } else {
+                    abaAtual.value = 'dashboard';
+                    await fetchDados(1);
+                    mostrarToast('sucesso', `Bem-vindo(a), ${res.nome}!`);
+                }
             } catch (err) {
                 mensagemErroLogin.value = err.message || 'Login ou senha inválidos.';
             } finally {
@@ -100,7 +195,9 @@ const app = createApp({
             tokenSessao.value = '';
             sessionStorage.removeItem('lainova_session_token');
             usuarioAutenticado.value = false;
-            usuarioAtual.value = { login: '', nome: '', cargo: '', id: '' };
+            usuarioAtual.value = { login: '', nome: '', cargo: '', id: '', primeiroAcesso: false };
+            modalSenhaAberto.value = false;
+            primeiroAcessoObrigatorio.value = false;
             membros.value = [];
             registros.value = [];
         };
@@ -110,9 +207,20 @@ const app = createApp({
             carregandoDados.value = true;
             try {
                 const res = await chamarBackend({ acao: 'validarSessao', token: tokenSessao.value });
-                usuarioAtual.value = { login: res.login, nome: res.nome, cargo: res.cargo, id: res.id || '' };
+                usuarioAtual.value = { 
+                    login: res.login, 
+                    nome: res.nome, 
+                    cargo: res.cargo, 
+                    id: res.id || '',
+                    primeiroAcesso: !!res.primeiroAcesso
+                };
                 usuarioAutenticado.value = true;
-                await fetchDados();
+                if (res.primeiroAcesso) {
+                    primeiroAcessoObrigatorio.value = true;
+                    modalSenhaAberto.value = true;
+                } else {
+                    await fetchDados(1);
+                }
             } catch (err) {
                 fazerLogout();
             } finally {
@@ -120,30 +228,79 @@ const app = createApp({
             }
         };
 
-        const fetchDados = async () => {
-            if (!usuarioAutenticado.value || !tokenSessao.value) return;
+        // Alterar Senha
+        const salvarNovaSenha = async ({ senhaAtual, novaSenha, confirmarSenha, primeiroAcesso }) => {
+            enviandoSenha.value = true;
+            erroSenha.value = '';
+            try {
+                await chamarBackend({
+                    acao: 'alterarSenha',
+                    token: tokenSessao.value,
+                    senhaAtual,
+                    novaSenha,
+                    confirmarSenha,
+                    primeiroAcesso
+                });
+                modalSenhaAberto.value = false;
+                primeiroAcessoObrigatorio.value = false;
+                usuarioAtual.value.primeiroAcesso = false;
+                mostrarToast('sucesso', 'Palavra-passe atualizada com sucesso!');
+                if (primeiroAcesso) {
+                    abaAtual.value = 'dashboard';
+                    await fetchDados(1);
+                }
+            } catch (e) {
+                erroSenha.value = e.message || 'Erro ao alterar palavra-passe.';
+            } finally {
+                enviandoSenha.value = false;
+            }
+        };
+
+        // Obter Dados com Paginação Backend
+        const fetchDados = async (pagina = 1) => {
+            if (!usuarioAutenticado.value || !tokenSessao.value || primeiroAcessoObrigatorio.value) return;
             carregandoDados.value = true;
             try {
-                const data = await chamarBackend({ acao: 'obterDados', token: tokenSessao.value });
+                const data = await chamarBackend({ 
+                    acao: 'obterDados', 
+                    token: tokenSessao.value,
+                    pagina: pagina,
+                    limite: 100,
+                    filtroMembro: filtroMembroHistorico.value
+                });
+                
                 membros.value = data.membros || [];
                 registros.value = data.registros || [];
                 if (data.projetos && data.projetos.length > 0) projetos.value = data.projetos;
                 if (data.categorias && data.categorias.length > 0) categorias.value = data.categorias;
                 
+                if (data.paginacao) {
+                    paginacaoHistorico.value = data.paginacao;
+                }
+
                 if (abaAtual.value === 'graficos') nextTick(() => renderizarGraficos());
                 if (abaAtual.value === 'relatorios') nextTick(() => renderizarGraficosRelatorio());
             } catch (e) {
-                console.error("Erro ao obter dados:", e);
+                mostrarToast('erro', 'Erro ao obter dados: ' + e.message);
             } finally {
                 carregandoDados.value = false;
             }
+        };
+
+        const mudarPaginaHistorico = (novaPagina) => {
+            fetchDados(novaPagina);
+        };
+
+        const mudarFiltroMembroHistorico = (novoMembro) => {
+            filtroMembroHistorico.value = novoMembro;
+            fetchDados(1);
         };
 
         const totalHorasGeral = computed(() => {
             return registros.value.reduce((acc, curr) => acc + (parseFloat(curr.Horas_Gastas) || 0), 0).toFixed(1);
         });
 
-        const totalLancamentos = computed(() => registros.value.length);
+        const totalLancamentos = computed(() => paginacaoHistorico.value.totalRegistros || registros.value.length);
 
         const acumuladoMembros = computed(() => {
             return membros.value.map(m => {
@@ -154,6 +311,10 @@ const app = createApp({
         });
 
         const mudarAba = (idAba) => {
+            if (primeiroAcessoObrigatorio.value) {
+                mostrarToast('aviso', 'Defina uma nova palavra-passe para aceder ao sistema.');
+                return;
+            }
             abaAtual.value = idAba;
             menuMobileAberto.value = false;
             if (idAba === 'graficos') nextTick(() => renderizarGraficos());
@@ -199,82 +360,85 @@ const app = createApp({
                     ...dadosAtualizados
                 });
                 modalEdicaoAberto.value = false;
-                await fetchDados();
-                alert('Lançamento atualizado com sucesso!');
+                await fetchDados(paginacaoHistorico.value.paginaAtual);
+                mostrarToast('sucesso', 'Lançamento atualizado com sucesso!');
             } catch (e) {
-                alert('Erro ao editar lançamento: ' + e.message);
+                mostrarToast('erro', 'Erro ao editar lançamento: ' + e.message);
             } finally {
                 enviandoEdicao.value = false;
             }
         };
 
-        const excluirRegistro = async (idRegistro) => {
-            if (!confirm(`Deseja realmente eliminar o lançamento ID ${idRegistro}?`)) return;
-            carregandoDados.value = true;
-            try {
-                await chamarBackend({
-                    acao: 'excluirRegistro',
-                    token: tokenSessao.value,
-                    idRegistro
-                });
-                await fetchDados();
-                alert('Lançamento removido com sucesso!');
-            } catch (e) {
-                alert('Erro ao excluir lançamento: ' + e.message);
-                carregandoDados.value = false;
-            }
+        const solicitarExclusaoRegistro = (reg) => {
+            abrirConfirmacao({
+                titulo: 'Excluir Lançamento de Horas',
+                mensagem: `Deseja realmente eliminar permanentemente o lançamento de ${reg.Horas_Gastas}h em "${reg.Projeto || 'Atividade'}" (${reg.Nome_Membro})?`,
+                tipo: 'destrutivo',
+                textoConfirmar: 'Sim, Excluir',
+                aoConfirmar: async () => {
+                    await chamarBackend({
+                        acao: 'excluirRegistro',
+                        token: tokenSessao.value,
+                        idRegistro: reg.ID
+                    });
+                    await fetchDados(paginacaoHistorico.value.paginaAtual);
+                    mostrarToast('sucesso', 'Lançamento removido com sucesso!');
+                }
+            });
         };
 
         const adicionarProjeto = async (nomeProjeto) => {
             carregandoProjetosCategorias.value = true;
             try {
                 await chamarBackend({ acao: 'adicionarProjeto', token: tokenSessao.value, nome: nomeProjeto });
-                await fetchDados();
-                alert(`Projeto "${nomeProjeto}" adicionado com sucesso!`);
+                await fetchDados(1);
+                mostrarToast('sucesso', `Projeto "${nomeProjeto}" adicionado com sucesso!`);
             } catch (e) {
-                alert("Erro ao adicionar projeto: " + e.message);
+                mostrarToast('erro', "Erro ao adicionar projeto: " + e.message);
             } finally {
                 carregandoProjetosCategorias.value = false;
             }
         };
 
-        const excluirProjeto = async (nomeProjeto) => {
-            if (!confirm(`Deseja realmente remover o projeto "${nomeProjeto}"?`)) return;
-            carregandoProjetosCategorias.value = true;
-            try {
-                await chamarBackend({ acao: 'excluirProjeto', token: tokenSessao.value, nome: nomeProjeto });
-                await fetchDados();
-            } catch (e) {
-                alert("Erro ao remover projeto: " + e.message);
-            } finally {
-                carregandoProjetosCategorias.value = false;
-            }
+        const excluirProjeto = (nomeProjeto) => {
+            abrirConfirmacao({
+                titulo: 'Remover Projeto',
+                mensagem: `Tem a certeza que deseja remover o projeto "${nomeProjeto}"?`,
+                tipo: 'destrutivo',
+                textoConfirmar: 'Remover',
+                aoConfirmar: async () => {
+                    await chamarBackend({ acao: 'excluirProjeto', token: tokenSessao.value, nome: nomeProjeto });
+                    await fetchDados(1);
+                    mostrarToast('sucesso', `Projeto "${nomeProjeto}" removido.`);
+                }
+            });
         };
 
         const adicionarCategoria = async (nomeCategoria) => {
             carregandoProjetosCategorias.value = true;
             try {
                 await chamarBackend({ acao: 'adicionarCategoria', token: tokenSessao.value, nome: nomeCategoria });
-                await fetchDados();
-                alert(`Categoria "${nomeCategoria}" adicionada com sucesso!`);
+                await fetchDados(1);
+                mostrarToast('sucesso', `Categoria "${nomeCategoria}" adicionada com sucesso!`);
             } catch (e) {
-                alert("Erro ao adicionar categoria: " + e.message);
+                mostrarToast('erro', "Erro ao adicionar categoria: " + e.message);
             } finally {
                 carregandoProjetosCategorias.value = false;
             }
         };
 
-        const excluirCategoria = async (nomeCategoria) => {
-            if (!confirm(`Deseja realmente remover a categoria "${nomeCategoria}"?`)) return;
-            carregandoProjetosCategorias.value = true;
-            try {
-                await chamarBackend({ acao: 'excluirCategoria', token: tokenSessao.value, nome: nomeCategoria });
-                await fetchDados();
-            } catch (e) {
-                alert("Erro ao remover categoria: " + e.message);
-            } finally {
-                carregandoProjetosCategorias.value = false;
-            }
+        const excluirCategoria = (nomeCategoria) => {
+            abrirConfirmacao({
+                titulo: 'Remover Categoria',
+                mensagem: `Tem a certeza que deseja remover a categoria "${nomeCategoria}"?`,
+                tipo: 'destrutivo',
+                textoConfirmar: 'Remover',
+                aoConfirmar: async () => {
+                    await chamarBackend({ acao: 'excluirCategoria', token: tokenSessao.value, nome: nomeCategoria });
+                    await fetchDados(1);
+                    mostrarToast('sucesso', `Categoria "${nomeCategoria}" removida.`);
+                }
+            });
         };
 
         // Relatórios
@@ -452,6 +616,7 @@ const app = createApp({
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            mostrarToast('sucesso', 'Ficheiro CSV descarregado com sucesso!');
         };
 
         const imprimirRelatorio = () => {
@@ -545,10 +710,10 @@ const app = createApp({
                     ativo: formData.ativo
                 });
                 modalMembroAberto.value = false;
-                await fetchDados();
-                alert(`Membro @${formData.login} criado com sucesso!`);
+                await fetchDados(1);
+                mostrarToast('sucesso', `Membro @${formData.login} cadastrado com sucesso!`);
             } catch (err) {
-                alert("Erro ao cadastrar membro: " + err.message);
+                mostrarToast('erro', "Erro ao cadastrar membro: " + err.message);
             } finally {
                 enviandoMembro.value = false;
             }
@@ -563,27 +728,30 @@ const app = createApp({
                     loginUsuario: loginMembro,
                     ativo: novoStatusAtivo ? 'SIM' : 'NAO'
                 });
-                await fetchDados();
+                await fetchDados(1);
+                mostrarToast('sucesso', `Status do utilizador @${loginMembro} atualizado.`);
             } catch (err) {
-                alert("Erro ao alterar status: " + err.message);
+                mostrarToast('erro', "Erro ao alterar status: " + err.message);
                 carregandoDados.value = false;
             }
         };
 
-        const removerMembro = async (loginMembro) => {
-            if (!confirm(`Tem a certeza que deseja eliminar o utilizador @${loginMembro} da liga?`)) return;
-            carregandoDados.value = true;
-            try {
-                await chamarBackend({
-                    acao: "excluirUsuario",
-                    token: tokenSessao.value,
-                    loginUsuario: loginMembro
-                });
-                await fetchDados();
-            } catch (err) {
-                alert("Erro ao eliminar: " + err.message);
-                carregandoDados.value = false;
-            }
+        const removerMembro = (loginMembro) => {
+            abrirConfirmacao({
+                titulo: 'Eliminar Membro',
+                mensagem: `Tem a certeza que deseja eliminar permanentemente o utilizador @${loginMembro} da liga?`,
+                tipo: 'destrutivo',
+                textoConfirmar: 'Sim, Eliminar',
+                aoConfirmar: async () => {
+                    await chamarBackend({
+                        acao: "excluirUsuario",
+                        token: tokenSessao.value,
+                        loginUsuario: loginMembro
+                    });
+                    await fetchDados(1);
+                    mostrarToast('sucesso', `Utilizador @${loginMembro} excluído.`);
+                }
+            });
         };
 
         const modoRegistro = ref('manual');
@@ -605,8 +773,14 @@ const app = createApp({
         });
 
         const salvarRegistro = async () => {
-            if (duracaoCalculadaHoras.value <= 0) { alert("Horário inválido. Verifique o início e fim."); return; }
-            if (!form.value.categoria) { alert("Selecione uma categoria."); return; }
+            if (duracaoCalculadaHoras.value <= 0) { 
+                mostrarToast('aviso', "Horário inválido. Verifique o início e fim da atividade."); 
+                return; 
+            }
+            if (!form.value.categoria) { 
+                mostrarToast('aviso', "Selecione uma categoria de atividade."); 
+                return; 
+            }
             enviandoRegistro.value = true;
             const dataFormatadaStr = form.value.data.split('-').reverse().join('/');
 
@@ -628,10 +802,11 @@ const app = createApp({
                     termino: '', 
                     descricao: '' 
                 };
+                mostrarToast('sucesso', 'Atividade registada com sucesso!');
                 mudarAba('historico');
-                await fetchDados();
+                await fetchDados(1);
             } catch (err) {
-                alert("Erro ao guardar: " + err.message);
+                mostrarToast('erro', "Erro ao registar: " + err.message);
             } finally {
                 enviandoRegistro.value = false;
             }
@@ -651,6 +826,7 @@ const app = createApp({
             form.value.inicio = new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute:'2-digit' });
             timerAtivo.value = true;
             intervalCronometro = setInterval(() => segundosCount.value++, 1000);
+            mostrarToast('info', 'Cronómetro iniciado.');
         };
 
         const pararCronometro = () => {
@@ -659,9 +835,8 @@ const app = createApp({
             form.value.termino = new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute:'2-digit' });
             modoRegistro.value = 'manual';
             segundosCount.value = 0;
+            mostrarToast('sucesso', 'Tempo preenchido no formulário!');
         };
-
-        const registrosOrdenados = computed(() => [...registros.value].sort((a,b) => parseDateToTime(b.Data) - parseDateToTime(a.Data)));
 
         onMounted(() => {
             intervalRelogio = setInterval(() => dataAtualObj.value = new Date(), 1000);
@@ -675,19 +850,23 @@ const app = createApp({
         });
 
         return {
-            usuarioAutenticado, usuarioAtual, carregandoLogin, mensagemErroLogin,
+            usuarioAutenticado, usuarioAtual, carregandoLogin, mensagemErroLogin, mensagemSucessoLogin,
             fazerLogin, fazerLogout,
+            toasts, mostrarToast, fecharToast,
+            modalConfirmacao, abrirConfirmacao, executarConfirmacao,
+            modalSenhaAberto, primeiroAcessoObrigatorio, enviandoSenha, erroSenha, salvarNovaSenha,
             abas, abaAtual, tituloAbaAtual: computed(() => abas.value.find(a => a.id === abaAtual.value)?.label),
             horaFormatada, dataFormatada, menuMobileAberto, mudarAba,
             membros, registros, projetos, categorias, carregandoDados, enviandoRegistro, enviandoMembro, carregandoProjetosCategorias,
             totalHorasGeral, totalLancamentos, acumuladoMembros, fetchDados,
+            paginacaoHistorico, filtroMembroHistorico, mudarPaginaHistorico, mudarFiltroMembroHistorico,
             adicionarProjeto, excluirProjeto, adicionarCategoria, excluirCategoria,
             modalMembroAberto, salvarMembro, alternarStatusMembro, removerMembro,
-            modalEdicaoAberto, registroParaEdicao, enviandoEdicao, abrirEdicaoRegistro, salvarEdicaoRegistro, excluirRegistro, podeEditarExcluir,
+            modalEdicaoAberto, registroParaEdicao, enviandoEdicao, abrirEdicaoRegistro, salvarEdicaoRegistro, solicitarExclusaoRegistro, podeEditarExcluir,
             periodoGrafico, mudarPeriodoGrafico,
             modoRegistro, form, duracaoCalculadaHoras, salvarRegistro,
             timerAtivo, cronometroDisplay, iniciarCronometro, pararCronometro,
-            registrosOrdenados, formatarDataSheet,
+            formatarDataSheet,
             filtroRelatorio, periodoRelatorioTexto, registrosRelatorio, registrosRelatorioOrdenados,
             kpisRelatorio, rankingRelatorio, aplicarFiltroRapido, exportarCSV, imprimirRelatorio
         };

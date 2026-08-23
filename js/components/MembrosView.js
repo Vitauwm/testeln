@@ -10,7 +10,7 @@ window.MembrosViewComponent = {
                     <h3 class="text-xl font-bold text-slate-800">Gestão de Utilizadores e Membros</h3>
                     <p class="text-xs text-slate-500 mt-0.5">Membros cadastrados na base de dados com acesso ao sistema.</p>
                 </div>
-                <button @click="$emit('abrir-modal')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 transition">
+                <button @click="$emit('abrir-modal')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition flex items-center justify-center gap-2 text-sm">
                     <i class="fa-solid fa-user-plus"></i> Adicionar Membro
                 </button>
             </div>
@@ -37,7 +37,7 @@ window.MembrosViewComponent = {
                                         <span>{{ m.nome }}</span>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 font-mono text-xs text-slate-600 font-bold">@{{ m.login }}</td>
+                                <td class="px-6 py-4 font-mono text-xs text-slate-700 font-bold">@{{ m.login }}</td>
                                 <td class="px-6 py-4">
                                     <span class="px-2.5 py-1 rounded-md text-xs font-bold"
                                           :class="{
