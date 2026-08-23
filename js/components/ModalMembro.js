@@ -33,8 +33,8 @@ window.ModalMembroComponent = {
                 this.erroValidacao = 'Por favor, preencha todos os campos obrigatórios.';
                 return;
             }
-            if (this.form.login.includes(' ')) {
-                this.erroValidacao = 'O login não pode conter espaços.';
+            if (!/^[a-zA-Z0-9._-]{3,30}$/.test(this.form.login.trim())) {
+                this.erroValidacao = 'O login deve ter entre 3 e 30 caracteres alfanuméricos (sem espaços).';
                 return;
             }
             this.$emit('salvar-membro', { ...this.form });
@@ -59,18 +59,18 @@ window.ModalMembroComponent = {
                 <form @submit.prevent="submeter" class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nome Completo *</label>
-                        <input v-model="form.nome" type="text" required placeholder="Ex: João Silva" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
+                        <input v-model="form.nome" type="text" required maxlength="100" placeholder="Ex: João Silva" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nome de Utilizador / Login *</label>
-                            <input v-model="form.login" type="text" required placeholder="Ex: joao.silva" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
+                            <input v-model="form.login" type="text" required maxlength="30" placeholder="Ex: joao.silva" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
                         </div>
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Palavra-passe Inicial *</label>
                             <div class="relative">
-                                <input v-model="form.senha" :type="mostrarSenha ? 'text' : 'password'" required placeholder="Defina a senha" class="w-full border border-slate-300 rounded-lg p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
+                                <input v-model="form.senha" :type="mostrarSenha ? 'text' : 'password'" required maxlength="100" placeholder="Defina a senha" class="w-full border border-slate-300 rounded-lg p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white" />
                                 <button type="button" @click="mostrarSenha = !mostrarSenha" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" tabindex="-1">
                                     <i :class="mostrarSenha ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'"></i>
                                 </button>

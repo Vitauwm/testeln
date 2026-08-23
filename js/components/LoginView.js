@@ -45,6 +45,7 @@ window.LoginViewComponent = {
                                 v-model="login" 
                                 type="text" 
                                 required 
+                                maxlength="50"
                                 autocomplete="username"
                                 placeholder="Digite o seu utilizador" 
                                 class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
@@ -60,6 +61,7 @@ window.LoginViewComponent = {
                                 v-model="senha" 
                                 :type="mostrarSenha ? 'text' : 'password'" 
                                 required 
+                                maxlength="100"
                                 autocomplete="current-password"
                                 placeholder="Digite a sua palavra-passe" 
                                 class="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
@@ -88,7 +90,7 @@ window.LoginViewComponent = {
 
                 <div class="mt-8 pt-6 border-t border-slate-100 text-center">
                     <p class="text-xs text-slate-400">
-                        <i class="fa-solid fa-shield-halved mr-1 text-slate-400"></i> Acesso restrito a membros autorizados.
+                        <i class="fa-solid fa-shield-halved mr-1 text-slate-400"></i> Acesso restrito com autenticação validada no servidor.
                     </p>
                 </div>
             </div>

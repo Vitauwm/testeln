@@ -61,7 +61,7 @@ const app = createApp({
             const data = await res.json();
             if (data.sessaoInvalida) {
                 fazerLogout();
-                throw new Error("Sessão expirada. Por favor, inicie sessão novamente.");
+                throw new Error("Sessão expirada ou acesso revogado. Por favor, inicie sessão novamente.");
             }
             if (data.sucesso === false && data.erro) {
                 throw new Error(data.erro);
@@ -185,7 +185,6 @@ const app = createApp({
             return new Date(iso + 'T00:00:00').getTime();
         };
 
-        // Gerenciamento de Edição e Exclusão de Registros de Horas
         const abrirEdicaoRegistro = (reg) => {
             registroParaEdicao.value = { ...reg };
             modalEdicaoAberto.value = true;
@@ -226,7 +225,6 @@ const app = createApp({
             }
         };
 
-        // Gerenciamento de Projetos e Categorias
         const adicionarProjeto = async (nomeProjeto) => {
             carregandoProjetosCategorias.value = true;
             try {
@@ -432,10 +430,18 @@ const app = createApp({
         }, { deep: true });
 
         const exportarCSV = () => {
+            const sanitizar = (txt) => {
+                if (!txt) return '';
+                let s = String(txt).replace(/"/g, '""');
+                if (s.length > 0 && ['=', '+', '-', '@', '\t', '\r'].includes(s.charAt(0))) {
+                    s = "'" + s;
+                }
+                return s;
+            };
+
             let csv = "Data,Membro,Projeto,Categoria,Horas,Descricao\n";
             registrosRelatorioOrdenados.value.forEach(r => {
-                let desc = (r.Descricao || '').replace(/"/g, '""');
-                csv += `${formatarDataSheet(r.Data)},"${r.Nome_Membro}","${r.Projeto || 'Atividade'}","${r.Categoria}",${r.Horas_Gastas},"${desc}"\n`;
+                csv += `"${sanitizar(formatarDataSheet(r.Data))}","${sanitizar(r.Nome_Membro)}","${sanitizar(r.Projeto || 'Atividade')}","${sanitizar(r.Categoria)}",${parseFloat(r.Horas_Gastas || 0).toFixed(1)},"${sanitizar(r.Descricao)}"\n`;
             });
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: "text/csv;charset=utf-8" });
             const url = URL.createObjectURL(blob);

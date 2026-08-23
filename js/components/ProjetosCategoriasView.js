@@ -48,6 +48,7 @@ window.ProjetosCategoriasViewComponent = {
                                 v-model="novoProjeto" 
                                 type="text" 
                                 required 
+                                maxlength="50"
                                 placeholder="Nome do novo projeto..." 
                                 class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition"
                             />
@@ -86,6 +87,7 @@ window.ProjetosCategoriasViewComponent = {
                                 v-model="novaCategoria" 
                                 type="text" 
                                 required 
+                                maxlength="50"
                                 placeholder="Nome da nova categoria..." 
                                 class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:bg-white focus:border-emerald-500 outline-none transition"
                             />

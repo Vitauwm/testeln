@@ -76,7 +76,7 @@ window.ModalEditarRegistroComponent = {
                         </div>
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Horas Registadas *</label>
-                            <input v-model.number="form.horas" type="number" step="0.1" min="0.1" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white font-bold text-emerald-700" />
+                            <input v-model.number="form.horas" type="number" step="0.1" min="0.1" max="24" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white font-bold text-emerald-700" />
                         </div>
                     </div>
 
@@ -97,7 +97,7 @@ window.ModalEditarRegistroComponent = {
 
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descrição Detalhada *</label>
-                        <textarea v-model="form.descricao" rows="3" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white resize-none"></textarea>
+                        <textarea v-model="form.descricao" rows="3" required maxlength="500" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-emerald-500 outline-none transition bg-slate-50 focus:bg-white resize-none"></textarea>
                     </div>
 
                     <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">

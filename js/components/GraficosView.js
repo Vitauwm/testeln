@@ -47,7 +47,7 @@ window.GraficosViewComponent = {
                 </div>
             </div>
 
-            <!-- ÁREA DOS GRÁFICOS (PROJETADA PARA IMPRESSÃO EM A4) -->
+            <!-- ÁREA DOS GRÁFICOS -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:grid-cols-3 print-avoid-break">
                 <div class="lg:col-span-2 print:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm print:p-4">
                     <h4 class="font-semibold text-slate-800 mb-3 capitalize text-sm">Carga Horária (Por {{ periodoGrafico }})</h4>

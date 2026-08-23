@@ -88,7 +88,7 @@ window.RegistrarViewComponent = {
 
                         <div class="md:col-span-2">
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descrição Detalhada *</label>
-                            <textarea v-model="form.descricao" rows="3" required placeholder="Descreva brevemente o que foi feito..." class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition resize-none text-sm"></textarea>
+                            <textarea v-model="form.descricao" rows="3" required maxlength="500" placeholder="Descreva brevemente o que foi feito..." class="w-full border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:border-emerald-500 outline-none transition resize-none text-sm"></textarea>
                         </div>
                     </div>
 

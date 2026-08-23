@@ -10,6 +10,16 @@ window.RelatoriosViewComponent = {
         formatarDataSheet: { type: Function, required: true }
     },
     emits: ['aplicar-filtro-rapido', 'exportar-csv', 'imprimir-relatorio'],
+    methods: {
+        sanitizarCSV(texto) {
+            if (!texto) return '';
+            let str = String(texto).replace(/"/g, '""');
+            if (str.length > 0 && ['=', '+', '-', '@', '\t', '\r'].includes(str.charAt(0))) {
+                str = "'" + str;
+            }
+            return str;
+        }
+    },
     template: `
         <div class="space-y-6 pb-10 print:space-y-4 print:pb-0">
             <!-- CABEÇALHO EXECUTIVO EXCLUSIVO PARA IMPRESSÃO (PDF) -->
@@ -79,7 +89,7 @@ window.RelatoriosViewComponent = {
                 </div>
             </div>
 
-            <!-- BLOCO DE KPIS (IMPRESSÃO EQUILIBRADA EM LINHA ÚNICA) -->
+            <!-- BLOCO DE KPIS -->
             <div class="grid grid-cols-2 lg:grid-cols-4 print:grid-cols-4 gap-4 print:gap-3 print-avoid-break">
                 <div class="bg-white p-5 print:p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
                     <span class="text-slate-500 text-xs uppercase font-bold tracking-wider mb-0.5">Total de Horas</span>
@@ -106,7 +116,7 @@ window.RelatoriosViewComponent = {
                 </div>
             </div>
 
-            <!-- BLOCO DE GRÁFICOS (PROPORÇÕES PERFEITAS NO PDF) -->
+            <!-- BLOCO DE GRÁFICOS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 print:grid-cols-2 gap-6 print:gap-4 print-avoid-break">
                 <div class="bg-white p-5 print:p-4 rounded-xl border border-slate-200 shadow-sm">
                     <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">Ranking de Horas por Membro</h4>
@@ -126,7 +136,6 @@ window.RelatoriosViewComponent = {
 
             <!-- TABELAS DE DETALHAMENTO -->
             <div class="grid grid-cols-1 lg:grid-cols-3 print:grid-cols-1 gap-6 print:gap-4">
-                <!-- Tabela de Resumo por Membro (Em tela dividida, em impressão empilhada e limpa) -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-1 print-avoid-break flex flex-col">
                     <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
                         <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider">Resumo por Membro</h3>
@@ -157,7 +166,6 @@ window.RelatoriosViewComponent = {
                     </div>
                 </div>
 
-                <!-- Tabela de Registros Detalhados -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-2 print-avoid-break flex flex-col">
                     <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
                         <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider">
@@ -197,8 +205,8 @@ window.RelatoriosViewComponent = {
 
             <!-- RODAPÉ EXECUTIVO PARA IMPRESSÃO -->
             <div class="print-only mt-6 pt-3 border-t border-slate-300 flex justify-between items-center text-[7.5pt] text-slate-400">
-                <span>LAINOVA • Liga Acadêmica de Inovação • Relatório gerado automaticamente</span>
-                <span>Página 1 de 1</span>
+                <span>LAINOVA • Liga Acadêmica de Inovação • Relatório gerado com autenticação segura</span>
+                <span>Documento Oficial</span>
             </div>
         </div>
     `

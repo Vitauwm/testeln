@@ -107,6 +107,7 @@
                     v-if="abaAtual === 'graficos' && usuarioAtual.cargo !== 'FUNCIONARIO'"
                     :registros="registros"
                     :periodo-grafico="periodoGrafico"
+                    :usuario="usuarioAtual"
                     @mudar-periodo="mudarPeriodoGrafico">
                 </graficos-view>
 
